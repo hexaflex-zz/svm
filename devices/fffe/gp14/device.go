@@ -5,7 +5,9 @@ import (
 	"log"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/hexaflex/svm/vm"
+
+	"github.com/hexaflex/svm/devices"
+	"github.com/hexaflex/svm/devices/fffe/cpu"
 )
 
 // Known interrupt operations.
@@ -46,6 +48,8 @@ type Device struct {
 	initialized bool
 }
 
+var _ devices.Device = New()
+
 func New() *Device {
 	return &Device{}
 }
@@ -75,8 +79,8 @@ func (d *Device) Update() {
 	}
 }
 
-func (d *Device) Id() vm.Id {
-	return vm.NewId(0xfffe, 0x0003)
+func (d *Device) Id() devices.Id {
+	return devices.NewId(0xfffe, 0x0003)
 }
 
 func (d *Device) Startup() error {
@@ -99,11 +103,11 @@ func (d *Device) Shutdown() error {
 }
 
 // Int triggers an interrupt on the device. The device can read from- and write to system memory.
-func (d *Device) Int(mem vm.Memory) {
-	btn := mem.U16(vm.R1) & 0xf
+func (d *Device) Int(mem devices.Memory) {
+	btn := mem.U16(cpu.R1) & 0xf
 	state := &d.state[btn]
 
-	switch mem.U16(vm.R0) {
+	switch mem.U16(cpu.R0) {
 	case isPressed:
 		mem.SetRSTCompare(state.pressed)
 	case isJustPressed:

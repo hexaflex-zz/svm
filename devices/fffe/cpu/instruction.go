@@ -1,4 +1,4 @@
-package vm
+package cpu
 
 import "github.com/hexaflex/svm/arch"
 

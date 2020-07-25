@@ -6,8 +6,10 @@ import (
 	"unsafe"
 
 	"github.com/go-gl/gl/v4.6-core/gl"
-	"github.com/hexaflex/svm/vm"
 	"github.com/pkg/errors"
+
+	"github.com/hexaflex/svm/devices"
+	"github.com/hexaflex/svm/devices/fffe/cpu"
 )
 
 // Known interrupt operations.
@@ -57,6 +59,8 @@ type Device struct {
 	initialized     bool
 }
 
+var _ devices.Device = New()
+
 func New() *Device {
 	return &Device{}
 }
@@ -79,8 +83,8 @@ func (d *Device) Draw() {
 	gl.DrawArrays(gl.TRIANGLES, 0, 6)
 }
 
-func (d *Device) Id() vm.Id {
-	return vm.NewId(0xfffe, 0x0002)
+func (d *Device) Id() devices.Id {
+	return devices.NewId(0xfffe, 0x0002)
 }
 
 func (d *Device) Startup() error {
@@ -132,8 +136,8 @@ func (d *Device) Shutdown() error {
 }
 
 // Int triggers an interrupt on the device. The device can read from- and write to system memory.
-func (d *Device) Int(mem vm.Memory) {
-	switch mem.U16(vm.R0) {
+func (d *Device) Int(mem devices.Memory) {
+	switch mem.U16(cpu.R0) {
 	case setBackgroundPalette:
 		d.setBackgroundPalette(mem)
 	case setForegroundPalette:
@@ -147,9 +151,9 @@ func (d *Device) Int(mem vm.Memory) {
 	case drawForeground:
 		d.drawForeground(mem)
 	case clearBackground:
-		d.clearBackground(mem)
+		d.clearBackground()
 	case clearForeground:
-		d.clearForeground(mem)
+		d.clearForeground()
 	case swap:
 		d.swap()
 	}
@@ -174,10 +178,10 @@ func (d *Device) swap() {
 	}
 }
 
-func (d *Device) drawBackground(mem vm.Memory) {
-	srcAddr := mem.U16(vm.R1)
-	dstAddr := mem.U16(vm.R2)
-	count := mem.U16(vm.R3)
+func (d *Device) drawBackground(mem devices.Memory) {
+	srcAddr := mem.U16(cpu.R1)
+	dstAddr := mem.U16(cpu.R2)
+	count := mem.U16(cpu.R3)
 	bg := d.background[:]
 
 	dx := dstAddr % HorizontalTileCount
@@ -193,9 +197,9 @@ func (d *Device) drawBackground(mem vm.Memory) {
 	d.backgroundDirty = true
 }
 
-func (d *Device) drawForeground(mem vm.Memory) {
-	srcAddr := mem.U16(vm.R1)
-	count := mem.U16(vm.R2)
+func (d *Device) drawForeground(mem devices.Memory) {
+	srcAddr := mem.U16(cpu.R1)
+	count := mem.U16(cpu.R2)
 	fg := d.foreground[:]
 
 	for i := 0; i < count; i++ {
@@ -239,20 +243,20 @@ func (d *Device) drawSprite(dst []byte, dstAddr, n int, isBackground bool) {
 	}
 }
 
-func (d *Device) clearBackground(mem vm.Memory) {
+func (d *Device) clearBackground() {
 	copy(d.background[:], d.empty[:])
 	d.backgroundDirty = true
 }
 
-func (d *Device) clearForeground(mem vm.Memory) {
+func (d *Device) clearForeground() {
 	copy(d.foreground[:], d.empty[:])
 	d.foregroundDirty = true
 }
 
-func (d *Device) setBackgroundSprites(mem vm.Memory) {
-	addr := mem.U16(vm.R1)
-	index := mem.U16(vm.R2)
-	count := mem.U16(vm.R3)
+func (d *Device) setBackgroundSprites(mem devices.Memory) {
+	addr := mem.U16(cpu.R1)
+	index := mem.U16(cpu.R2)
+	count := mem.U16(cpu.R3)
 	sprites := d.sprites[index*SpritePixelSize*SpritePixelSize:]
 
 	for i := 0; i < count*SpriteByteSize; i++ {
@@ -263,10 +267,10 @@ func (d *Device) setBackgroundSprites(mem vm.Memory) {
 	}
 }
 
-func (d *Device) setForegroundSprites(mem vm.Memory) {
-	addr := mem.U16(vm.R1)
-	index := BufferSize + mem.U16(vm.R2)
-	count := mem.U16(vm.R3)
+func (d *Device) setForegroundSprites(mem devices.Memory) {
+	addr := mem.U16(cpu.R1)
+	index := BufferSize + mem.U16(cpu.R2)
+	count := mem.U16(cpu.R3)
 	sprites := d.sprites[index*SpritePixelSize*SpritePixelSize:]
 
 	for i := 0; i < count*SpriteByteSize; i++ {
@@ -277,8 +281,8 @@ func (d *Device) setForegroundSprites(mem vm.Memory) {
 	}
 }
 
-func (d *Device) setBackgroundPalette(mem vm.Memory) {
-	addr := mem.U16(vm.R1)
+func (d *Device) setBackgroundPalette(mem devices.Memory) {
+	addr := mem.U16(cpu.R1)
 	pal := d.palette[:PaletteSize*4]
 	pal[3] = 0 // First color is always transparent.
 
@@ -289,8 +293,8 @@ func (d *Device) setBackgroundPalette(mem vm.Memory) {
 	d.paletteDirty = true
 }
 
-func (d *Device) setForegroundPalette(mem vm.Memory) {
-	addr := mem.U16(vm.R1)
+func (d *Device) setForegroundPalette(mem devices.Memory) {
+	addr := mem.U16(cpu.R1)
 	pal := d.palette[PaletteSize*4:]
 	pal[3] = 0 // First color is always transparent.
 

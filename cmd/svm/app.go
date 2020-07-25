@@ -13,9 +13,9 @@ import (
 
 	"github.com/hexaflex/svm/arch"
 	"github.com/hexaflex/svm/asm/ar"
-	"github.com/hexaflex/svm/vm"
-	"github.com/hexaflex/svm/vm/devices/FFFE/gp14"
-	"github.com/hexaflex/svm/vm/devices/FFFE/sprdi"
+	"github.com/hexaflex/svm/devices/fffe/cpu"
+	"github.com/hexaflex/svm/devices/fffe/gp14"
+	"github.com/hexaflex/svm/devices/fffe/sprdi"
 )
 
 // App defines application context.
@@ -192,7 +192,7 @@ func (a *App) initGL() error {
 	return nil
 }
 
-// loadProgram loads the current program from disk and restarts the VM.
+// loadProgram loads the current program from disk and restarts the cpu.
 func (a *App) loadProgram() error {
 	log.Println("loading", a.config.Program)
 
@@ -220,7 +220,7 @@ func (a *App) loadProgram() error {
 //
 // It also ensures execution is stopped if the given instruction has a breakpoint
 // associated with it. This only happens if a.config.Debug is true.
-func (a *App) printTrace(i *vm.Instruction) {
+func (a *App) printTrace(i *cpu.Instruction) {
 	var dbg *ar.DebugData
 
 	// Pause execution if we are in debug mode and this instruction has a breakpoint.
@@ -247,11 +247,11 @@ func (a *App) printTrace(i *vm.Instruction) {
 	for j := 0; j < argc; j++ {
 		argv := i.Args[j]
 
-		if argv.Mode == vm.Register {
-			index := (argv.Address - vm.UserMemoryCapacity) / 2
+		if argv.Mode == cpu.Register {
+			index := (argv.Address - cpu.UserMemoryCapacity) / 2
 			fmt.Fprintf(&sb, "%4s %04x", arch.RegiserName(index), uint16(argv.Value))
 
-		} else if argv.Mode == vm.Address {
+		} else if argv.Mode == cpu.Address {
 			fmt.Fprintf(&sb, "%04x %04x", argv.Address, uint16(argv.Value))
 
 		} else {
@@ -277,10 +277,10 @@ func (a *App) printTrace(i *vm.Instruction) {
 func printHelp() {
 	var sb strings.Builder
 	sb.WriteString("shortcut keys:\n")
-	sb.WriteString(" ESC      Exit the VM.\n")
+	sb.WriteString(" ESC      Exit the cpu.\n")
 	sb.WriteString(" F1       Display this help.\n")
 	sb.WriteString(" F2       Enable/Disable debug mode.\n")
-	sb.WriteString(" F5       (re)load the program from disk and reset the VM.\n")
+	sb.WriteString(" F5       (re)load the program from disk and reset the cpu.\n")
 	sb.WriteString(" Q        Start/Stop program execution.\n")
 	sb.WriteString(" E        Perform a single execution step.\n")
 	sb.WriteString(" D        Enable/Disable debug trace output.\n")

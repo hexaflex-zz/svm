@@ -1,4 +1,4 @@
-package vm
+package cpu
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/hexaflex/svm/arch"
 	"github.com/hexaflex/svm/asm/ar"
+	"github.com/hexaflex/svm/devices"
 )
 
 func TestMOV(t *testing.T) {
@@ -845,14 +846,14 @@ func runTest(t *testing.T, ct *codeTest) {
 	}
 }
 
-const testId Id = 0xc0ffee
+const testId devices.Id = 0xc0ffee
 
 type testDevice struct{}
 
-func (d *testDevice) Id() Id          { return testId }
-func (d *testDevice) Startup() error  { return nil }
-func (d *testDevice) Shutdown() error { return nil }
-func (d *testDevice) Int(m Memory)    { m.SetI16(R0, 123) }
+func (d *testDevice) Id() devices.Id       { return testId }
+func (d *testDevice) Startup() error       { return nil }
+func (d *testDevice) Shutdown() error      { return nil }
+func (d *testDevice) Int(m devices.Memory) { m.SetI16(R0, 123) }
 
 type codeTest struct {
 	program bytes.Buffer

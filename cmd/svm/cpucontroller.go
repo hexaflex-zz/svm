@@ -4,20 +4,21 @@ import (
 	"io"
 	"time"
 
-	"github.com/hexaflex/svm/vm"
+	"github.com/hexaflex/svm/devices"
+	"github.com/hexaflex/svm/devices/fffe/cpu"
 )
 
 // CPUController controls the execution of a CPU.
 type CPUController struct {
-	cpu        *vm.CPU
+	cpu        *cpu.CPU
 	start      time.Time
 	cycleCount uint64
 	running    bool
 }
 
 // NewCPUController creates a new CPU controller.
-func NewCPUController(trace vm.TraceFunc, devices ...vm.Device) *CPUController {
-	cpu := vm.New(trace)
+func NewCPUController(trace cpu.TraceFunc, devices ...devices.Device) *CPUController {
+	cpu := cpu.New(trace)
 
 	for _, dev := range devices {
 		cpu.Connect(dev)

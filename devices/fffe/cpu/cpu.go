@@ -1,5 +1,5 @@
-// Package vm implements the SVM CPU
-package vm
+// Package cpu implements the SVM CPU
+package cpu
 
 import (
 	"errors"
@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"github.com/hexaflex/svm/arch"
+	"github.com/hexaflex/svm/devices"
 )
 
 // TraceFunc represents a callback handler for debug trace output.
 type TraceFunc func(*Instruction)
 
 type CPU struct {
-	devices     DeviceMap   // Connected peripherals.
+	devices     devices.Map // Connected peripherals.
 	trace       TraceFunc   // Handler for debug trace output.
 	memory      Memory      // System memory.
 	instr       Instruction // Decoded instruction data.
@@ -39,13 +40,13 @@ func New(trace TraceFunc) *CPU {
 	}
 }
 
-func (c *CPU) Id() Id {
-	return NewId(0xfffe, 0x0001)
+func (c *CPU) Id() devices.Id {
+	return devices.NewId(0xfffe, 0x0001)
 }
 
 // Connect connects the given hardware peripheral to the system.
 // Returns false if the given device type is already connected.
-func (c *CPU) Connect(dev Device) bool {
+func (c *CPU) Connect(dev devices.Device) bool {
 	return c.devices.Connect(dev)
 }
 
@@ -226,7 +227,7 @@ func (c *CPU) Step() error {
 		mem.SetU16(RIP, va)
 
 	case arch.HWA:
-		id := NewId(args[1].Value, args[2].Value)
+		id := devices.NewId(args[1].Value, args[2].Value)
 		if index := c.devices.Find(id); index == -1 {
 			mem.SetRSTCompare(false)
 		} else {

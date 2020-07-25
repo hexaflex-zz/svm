@@ -1,4 +1,4 @@
-package vm
+package devices
 
 import (
 	"log"
@@ -24,12 +24,12 @@ type Device interface {
 	Int(Memory)
 }
 
-// DeviceMap contains a list of registered peripherals.
-type DeviceMap []Device
+// Map contains a list of registered peripherals.
+type Map []Device
 
 // Connect adds the given device to the device map.
 // Returns false if the device type is already present in the set.
-func (dm *DeviceMap) Connect(dev Device) bool {
+func (dm *Map) Connect(dev Device) bool {
 	if (*dm).Find(dev.Id()) > -1 {
 		return false
 	}
@@ -40,7 +40,7 @@ func (dm *DeviceMap) Connect(dev Device) bool {
 
 // Int triggers an interrupt on the device with the given index.
 // Returns false if the index is not valid.
-func (dm DeviceMap) Int(index int, m Memory) bool {
+func (dm Map) Int(index int, m Memory) bool {
 	if index < 0 || index >= len(dm) {
 		return false
 	}
@@ -49,7 +49,7 @@ func (dm DeviceMap) Int(index int, m Memory) bool {
 }
 
 // Startup initializes internal resources.
-func (dm DeviceMap) Startup() error {
+func (dm Map) Startup() error {
 	var errorset ErrorSet
 
 	for _, dev := range dm {
@@ -67,7 +67,7 @@ func (dm DeviceMap) Startup() error {
 }
 
 // Shutdown cleans up internal resources.
-func (dm DeviceMap) Shutdown() error {
+func (dm Map) Shutdown() error {
 	var errorset ErrorSet
 
 	for _, dev := range dm {
@@ -86,7 +86,7 @@ func (dm DeviceMap) Shutdown() error {
 
 // Find returns the index for the device with the given id.
 // Returns -1 if it can't be found.
-func (dm DeviceMap) Find(id Id) int {
+func (dm Map) Find(id Id) int {
 	for i, dev := range dm {
 		if dev.Id() == id {
 			return i
