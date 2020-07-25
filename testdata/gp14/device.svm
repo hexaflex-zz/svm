@@ -1,0 +1,20 @@
+; Interrupt codes
+const IsPressed        = 0
+const IsJustPressed    = 1
+const IsJustReleased   = 2
+
+; Button indices
+const ButtonA           = 0
+const ButtonB           = 1
+const ButtonX           = 2
+const ButtonY           = 3
+const ButtonLeftBumper  = 4
+const ButtonRightBumper = 5
+const ButtonBack        = 6
+const ButtonStart       = 7
+const ButtonLeftThumb   = 9
+const ButtonRightThumb  = 10
+const ButtonUp          = 11
+const ButtonRight       = 12
+const ButtonDown        = 13
+const ButtonLeft        = 14

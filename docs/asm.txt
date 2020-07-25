@@ -1,0 +1,278 @@
+===============================================================================
+ Assembler & Language
+===============================================================================
+
+ Document rev.: 20
+
+
+===============================================================================
+ Modules and Import paths
+===============================================================================
+
+ The basic building block of a program is a module. Each module has a unique
+ name and import path. This path is the directory in which its source files are
+ located, relative to the source root directory provided to the assembler.
+
+ The module name is the last directory of the import path and is the name by
+ which a module is referenced in code when addressing a specific symbol in
+ that module. E.g.:
+
+     import "path/to/mymodule"
+
+     add r0, mymodule.foo
+
+ The import statement can accept an alias to use as a name instead of the
+ actual module name. This allows one to import multiple modules which happen
+ to have the same name. E.g.: 
+ 
+     import first, "path/to/first/somemodule"
+     import second, "path/to/second/somemodule"
+
+     add r0, first.foo
+     add r1, second.foo
+
+ The assembler is invoked with the module's import path. It will automatically
+ collate all source files in the specified directory and considers them part
+ of the same module. Source files are expected to have the extension .svm
+ or .asm
+
+
+===============================================================================
+ Labels
+===============================================================================
+
+ Labels refer to memory addresses which are not yet known at the time of
+ writing the code. They can be defined at the beginning of any line and
+ are prefixed with a colon.
+
+    :mylabel
+
+ Any instruction operand can refer to a label. A compile time, the reference is
+ replaced with the actual address represented by the label.
+
+
+===============================================================================
+ Code comments
+===============================================================================
+  
+ Code comments are single line and start with a semi-colon:
+
+   ; This line is ignored by the assembler.
+
+
+===============================================================================
+ Numeric literals
+===============================================================================
+
+ For numbers, the language accepts signed integers. Floating point values are
+ not supported. Numeric literals can be written with an optional base prefix:
+
+    123       No base prefix: default base 10 literal.
+    2#10010   Base 2 or binary literal.
+    8#644     Base 8 or octal literal.
+    10#123    Base 10 or decimal literal.
+    16#f1b2   Base 16 or hexadecimal literal.
+
+ With signed literals, the sign preceeds the base prefix:
+
+    -16#ff
+
+ Digits can be separated by an underscore (_) to make a number easier to read:
+
+    2#01001_110101_01110
+
+
+================================================================================
+ Character literals
+================================================================================
+ 
+ Character literals are valid UTF-8 characters, encased in single quotes.
+ These are converted to their numeric representations and thus can be used in
+ arithmetic expressions:
+
+     mov r1, 'a'           ; r1 = 97
+     mov r1, 'Z' - 13      ; r1 = 77
+
+ Escape sequences are allowed:
+
+     mov r1, '\''          ; r1 = 39
+     mov r1, '\u12e4'      ; r1 = 4836
+
+
+================================================================================
+ String literals
+================================================================================
+
+ Data directives (d8, d16, etc) can accept string literals as operands.
+ The unicode codepoints in the string are then stored as numbers with the size
+ defined by the data directive. Note that multibyte codepoints will be truncated
+ if stored as a type that can't hold the full value.
+
+
+================================================================================
+ Instructions
+================================================================================
+
+ An instruction is defined by a name and an optional comma-separated list
+ of operands.
+
+    add x, y, z
+
+ Where x, y and z are the operands. These can be label names, registers, numeric
+ constants or addresses.
+
+
+================================================================================
+ Address modes
+================================================================================
+
+ When specifying a value for an instruction operand, we can specify one of three
+ addressing modes:
+
+ * Registers: Whenever the name of a register is used, the assembler assumes
+   the use of the register address mode.
+
+   mov r0, r1        ; r0 = r1
+
+ * Constants: Values which are meant to be used as-is, are prefixed with '$'.
+
+   mov r0, $123      ; r0 = 123
+
+ * Addresses: Values which are meant to be used as memory addresses, are
+   specified without any extra data.
+
+   mov r0, 123       ; r0 = mem[123]
+
+
+===============================================================================
+ Scope blocks
+===============================================================================
+
+ A scope block is any sequence of instructions or directives, encased in a
+ block of curly braces '{' and '}'. It creates a new scope for label- and
+ constant definitions.
+
+ Any labels or constants defined inside a scope block are only valid inside
+ that scope and its child scopes. A symbol inside a scope block with the same
+ name as a symbol in a parent scope, will take precedence over the parent one
+ when being referenced.
+ 
+ Similarly, a local symbol can not be referenced from outside of the scope
+ in which it is defined.
+
+ Scope blocks can occur anywhere and can be nested.
+
+    const foo = 123
+    const bar = 321
+    {
+       const foo = 456
+       {
+          const foo = 789
+          const quux = 987
+          mov r0, $foo                ; r0 = 789
+       }
+       mov r0, $foo                   ; r0 = 456
+       mov r1, $bar                   ; r0 = 321
+    }
+    mov r0, $foo                      ; r0 = 123
+    mov r1, $quux                     ; Error - quux is defined in a child
+                                      ; scope and is not available here.
+
+
+===============================================================================
+ Conditional branching
+===============================================================================
+
+ The language supports simple `if` statements. These accept an expression to be
+ tested. Note that this is not a compile-time expression. If the expression
+ evaluates to true, the following instruction is executed. Otherwise it is
+ skipped. E.g.:
+
+    if r0 < r1                   ; test if r0 is less than r1.
+       mul r0, r0, -1            ; Multiply r0 by -1 iff the condition is true.
+
+ The assembler translates this into the following:
+
+    clt r0, r1                   ; RST/compare = 1 iff r0 < r1
+    jez _4239874274              ; Jump past the multiply iff RST/compare = 0
+    mul r0, r0, -1               ; Multiply r0 by -1.
+    :_4239874274
+
+ The label `_4239874274` is automatically generated by the assembler to have a
+ unique, unused name.
+
+
+================================================================================
+ Assembler directives
+================================================================================
+
+ These are not real instructions. Instead they are a special syntax recognized
+ by the assembler to make programming a little easier.
+
+  Directive             | Description
+ =======================|===========================================================
+  $$                    | This is a special constant which always refers to the
+                        | address of the current instruction. It can be used to
+                        | refer to relative memory offsets. It is valid in any
+                        | operand expression.
+ -----------------------|-----------------------------------------------------------
+  import alias, path    | Imports a given compiled module. The alias is the name by
+                        | which symbols in this module are referenced. If the alias
+                        | is omitted, it defaults to the last component in the path.
+                        | E.g.: `import "path/to/module" -> "module"
+ -----------------------|-----------------------------------------------------------
+  const x = y           | Defines a constant x to match expression y. The assembler
+                        | will replace any occurrence of x in the source code, with
+                        | the expression y.
+ -----------------------|-----------------------------------------------------------
+  d8  args              | Writes raw 8-bit operand values into the program.
+  d16 args              | Writes raw 16-bit operand values into the program.
+  d32 args              | Writes raw 32-bit operand values into the program.
+  d64 args              | Writes raw 64-bit operand values into the program.
+ -----------------------|-----------------------------------------------------------
+  break                 | Inserts a breakpoint at the current address. If run in
+                        | debug mode by the VM, this will pause execution and allows
+                        | inspection of memory and registers etc.
+ -----------------------|-----------------------------------------------------------
+
+
+================================================================================
+ Compile-time expression evaluation
+================================================================================
+
+ Operands for instructions can consist of an expression with values and
+ operators. E.g.: 1 * (2 + 3) << foo
+
+ This expression will be evaluated and reduced to a single value, during
+ compilation.
+
+ The values can be numbers, strings and references to defined constants, as
+ well as label names. It is possible to refer to labels which have not yet
+ been defined in the source code.
+
+ Supported operators are:
+
+    Op | Example   | Notes
+  -----|-----------|-----------------------------------
+     + | a + b     | 
+     - | a - b     | 
+     - | -a        | 
+     * | a * b     | 
+     / | a / b     | 
+     % | a % b     | 
+    << | a << b    | 
+    >> | a >> b    | 
+     & | a & b     | 
+     | | a | b     | 
+     ^ | a ^ b     | Exclusive OR of a and b.
+     ^ | ^b        | Bitwise inversion.
+  -----|-----------|-----------------------------------
+    == | a == b    | 0 iff false, -1 if true.
+    != | a != b    | 0 iff false, -1 if true.
+     < | a < b     | 0 iff false, -1 if true.
+    <= | a <= b    | 0 iff false, -1 if true.
+     > | a > b     | 0 iff false, -1 if true.
+    >= | a >= b    | 0 iff false, -1 if true.
+  -----|-----------|-----------------------------------
+
+

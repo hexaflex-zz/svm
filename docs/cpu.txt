@@ -1,0 +1,159 @@
+===============================================================================
+ CPU & Architecture
+===============================================================================
+
+ Manufacturer:  0xFFFE
+ Serialno.:     0x0001
+ Document rev.: 12
+
+
+ The CPU clock frequency is unbounded and limited by the host system and
+ implementation. It has 65,536 bytes of byte-addressable memory and 7 builtin
+ registers. Address values are 16 bits and so are all but one register.
+
+    # | Name | Description
+ -----|------|---------------------------------------------------------------
+    0 |   R0 | 16 bit general purpose register.
+    1 |   R1 | 16 bit general purpose register.
+    2 |   R2 | 16 bit general purpose register.
+    3 |   R3 | 16 bit general purpose register.
+    4 |  RSP | 16 bit stack pointer.
+    5 |  RIP | 16 bit instruction pointer.
+    6 |  RST | 8 bit status register with layout: 00000cba
+      |      | 
+      |      | a: compare flag; used by comparison instructions. 
+      |      | b: overflow flag; set when certain arithmetic 
+      |      |    operations overflow. 
+      |      | c: division by zero flag. 
+      |      | 
+      |      | Remaining bits are unused and reserved for future use.
+ -----|------|----------------------------------------------------------------
+
+ Directly writing to RSP, RIP or RST can have undesirable side effects and
+ should be avoided.
+
+
+================================================================================
+ Instructions
+================================================================================
+
+ Operands can be either numeric literals, label names, registers or named
+ constants. Unless otherwise stated, non-address operands are treated as signed
+ values.
+
+
+   # | Name        | Description
+ ====|=============|============================================================
+  00 | NOP         | Do nothing (no-op) for one cycle.
+  01 | HALT        | Unconditionally halts execution and shuts down the system.
+  02 | MOV x y     | x = y
+  03 | PUSH x      | Pushes x onto the callstack and decrements RSP by 2.
+  04 | POP x       | Pops a value from the callstack, stores it in x and
+     |             | increments RSP by 2.
+  05 | RNG x y z   | x = pseudo-random number in the range [y, z).
+     |             | RST/overflow is 1 iff y - z < 0.
+     |             | y and z are treated as unsigned.
+  06 | SEED x      | Sets the seed for the RNG instruction to the value in x.
+     |             | x is treated as unsigned.
+ ----|-------------|------------------------------------------------------------
+  07 | ADD x y z   | x = y + z
+     |             | RST/overflow is 1 iff operation overflows.
+  08 | SUB x y z   | x = y - z
+     |             | RST/overflow is 1 iff operation overflows.
+  09 | MUL x y z   | x = y * z
+     |             | RST/overflow is 1 iff operation overflows.
+  0a | DIV x y z   | x = y / z
+     |             | RST/divide-by-zero is 1 iff z is 0.
+  0b | MOD x y z   | x = y % z
+     |             | RST/divide-by-zero is 1 iff z is 0.
+  0c | SHL x y z   | x = y << z
+     |             | z is treated as unsigned.
+  0d | SHR x y z   | x = y >> z
+     |             | z is treated as unsigned.
+  0e | AND x y z   | x = y & z
+  0f |  OR x y z   | x = y | z
+  10 | XOR x y z   | x = y ^ z
+  11 | ABS x y     | x = abs(y)
+  12 | POW x y z   | x = pow(y, z)
+     |             | RST/overflow is 1 iff operation overflows.
+ ----|-------------|------------------------------------------------------------
+  13 | CEQ x y     | RST/compare is 1 iff x == y
+  14 | CNE x y     | RST/compare is 1 iff x != y
+  15 | CGT x y     | RST/compare is 1 iff x > y
+  16 | CGE x y     | RST/compare is 1 iff x >= y
+  17 | CLT x y     | RST/compare is 1 iff x < y
+  18 | CLE x y     | RST/compare is 1 iff x <= y
+ ----|-------------|------------------------------------------------------------
+  19 | JMP x       | Unconditionally jump to address x.
+  1a | JEZ x       | Jump to address x iff RST/compare == 0
+  1b | JNZ x       | Jump to address x iff RST/compare == 1
+  1c | CALL x      | Pushes RIP onto the callstack and then jumps to x.
+  1d | CLEZ x      | Pushes RIP onto the callstack.
+     |             | Jumps to x iff RST/compare = 0.
+  1e | CLNZ x      | Pushes RIP onto the callstack.
+     |             | Jumps to x iff RST/compare = 1.
+  1f | RET         | Pops return address from callstack and jumps to it.
+ ----|-------------|------------------------------------------------------------
+  20 | HWA x y z   | x = <Interrupt index for the device>. Where y is the
+     |             | Manufacturer Id and z is the serial number.
+     |             | RST/compare is 1 iff the device is found.
+     |             | y and z are treated as unsigned.
+  21 | INT x       | Trigger an interrupt on device x.
+     |             | x is treated as unsigned.
+ ----|-------------|------------------------------------------------------------
+
+
+================================================================================
+ Instruction Encoding
+================================================================================
+
+ Instructions are variable width. Meaning they encode to varying binary sizes,
+ depending on the number- and type of their operands. The smallest being 1 byte
+ and the widest being 10 bytes. The bit layout is as follows:
+
+   aaaaaaaa bbbbbbbb bbbbbbbb bbbbbbbb
+            cccccccc cccccccc cccccccc
+            dddddddd dddddddd dddddddd
+
+	a: 8 bit opcode.
+   b: 0-, 8-, 24-bit operand A.
+   c: 0-, 8-, 24-bit operand B.
+   d: 0-, 8-, 24-bit operand C.
+
+ Layout of an operand:
+
+   aacccccc dddddddd dddddddd
+
+   a: 2 bit operand address mode:
+      0 = constant
+      1 = address
+      2 = register
+   c: 6-bit operand value iff a is 2.
+   d: 16-bit operand value iff a is 0 or 1.
+
+
+================================================================================
+ Hardware devices
+================================================================================
+
+ A CPU can connect to- and interact with hardware peripherals. Code can call
+ functions on a given device using the INT instruction. Operands for these
+ operations are passed through the general purpose registers. Which operands a
+ given operation requires, is explained in the documentation for the respective
+ device.
+
+ The single argument for the INT instruction is the address where the device is
+ mapped. Where a specific device is mapped can be discovered using the HWA
+ instruction.
+
+
+================================================================================
+ Error conditions
+================================================================================
+
+ Whenever a program encounters an error, the system crashes.
+ This happens under the following conditions:
+
+ * Trying to jump to- or begin execution at an invalid memory address.
+ * Attempting to trigger an interrupt on an unknown device.
+

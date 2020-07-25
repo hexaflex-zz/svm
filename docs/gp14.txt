@@ -1,0 +1,74 @@
+===============================================================================
+ GP14 - Gamepad
+===============================================================================
+
+ Manufacturer:  0xFFFE
+ Serialno.:     0x0003
+ Document rev.: 3
+
+ GP14 is a simple, 14-button game pad with digital directional controls.
+
+
+===============================================================================
+ Interrupts
+===============================================================================
+
+ The device is controlled through interrupts. Arguments for these operations
+ are provided through registers R0, R1 and R2.
+
+    0x00 IsPressed
+
+        Sets the compare flag if a given button is currently pressed.
+
+        Inputs:
+         R1: Button index. Refer to "Button Ids" section for details.
+
+        Outputs:
+         RST/compare: 1 iff the button is pressed.
+         RST/compare: 0 iff the button is released.
+
+
+    0x01 IsJustPressed
+
+        Sets the compare flag if a given button was pressed since the 
+        last frame.
+
+        Inputs:
+         R1: Button index. Refer to "Button Ids" section for details.
+
+        Outputs:
+         RST/compare: 1 iff the button was just pressed.
+         RST/compare: 0 iff the button is released or pressed a while ago.
+
+
+    0x02 IsJustReleased
+
+        Sets the compare flag if a given button was released since the 
+        last frame.
+
+        Inputs:
+         R1: Button index. Refer to "Button Ids" section for details.
+
+        Outputs:
+         RST/compare: 1 iff the button was just released.
+         RST/compare: 0 iff the button is pressed or released a while ago.
+
+
+===============================================================================
+ Button Ids
+===============================================================================
+
+    0x00  ButtonA
+    0x01  ButtonB
+    0x02  ButtonX
+    0x03  ButtonY
+    0x04  ButtonLeftBumper
+    0x05  ButtonRightBumper
+    0x06  ButtonBack
+    0x07  ButtonStart
+    0x09  ButtonLeftThumb
+    0x0a  ButtonRightThumb
+    0x0b  ButtonUp
+    0x0c  ButtonRight
+    0x0d  ButtonDown
+    0x0e  ButtonLeft
