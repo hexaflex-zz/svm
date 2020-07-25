@@ -73,6 +73,12 @@ func (a *App) mainLoop() {
 		if err != nil {
 			log.Println(err)
 		}
+
+		// If some part of a program stopped the cpu from running,
+		// we want to exit if we're not in debug mode.
+		if !a.cpu.Running() && !a.config.Debug {
+			a.window.SetShouldClose(true)
+		}
 	}
 
 	// Periodically render display contents.
