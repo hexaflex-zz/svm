@@ -9,8 +9,12 @@ import "test/font"
     call $setup
 
 :loop
-    mov r0, $gp14.IsJustPressed                                                ; Set text color to something random iff ButtonA was pressed.
-    mov r1, $gp14.ButtonA
+    mov r0, $gp14.IsJustPressed                                                ; Exit the program if ButtonBack is pressed.
+    mov r1, $gp14.ButtonBack
+    int gamepadIndex
+    jnz $exit
+
+    mov r1, $gp14.ButtonA                                                      ; Set text color to something random iff ButtonA was pressed.
     int gamepadIndex
     jez $skip_recolor
 
@@ -29,6 +33,9 @@ import "test/font"
     mov r0, $sprdi.Swap                                                        ; Present backbuffer.
     int displayIndex
     jmp $loop
+
+:exit
+    halt
 }
 
 ; setup initializes various devices properties.
