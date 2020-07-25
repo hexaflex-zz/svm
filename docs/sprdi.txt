@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0002
- Document rev.: 8
+ Document rev.: 9
 
  This device serves as a display for simple tiled graphics with a fixed
  resolution of 256 x 240 pixels. It manages internal foreground- and background
@@ -24,7 +24,7 @@
  provided below.
 
 
-  0x01 SetBackgroundPalette
+  0x00 SetBackgroundPalette
 
        Copies a color palette from system memory into the device's background
        palette buffer. Refer to the Color Palette section below for details on
@@ -32,7 +32,7 @@
 
        R1: Address where the new color palette is stored in system memory.
 
-  0x02 SetForegroundPalette
+  0x01 SetForegroundPalette
 
        Copies a color palette from system memory into the device's foreground
        palette buffer. Refer to the Color Palette section below for details on
@@ -40,7 +40,7 @@
 
        R1: Address where the new color palette is stored in system memory.
 
-  0x03 SetBackgroundSprites
+  0x02 SetBackgroundSprites
 
        Copies one or more sprites into the background sprite buffer. This is
        meant for the actual sprite pixel data. Refer to the Sprites section for
@@ -50,7 +50,7 @@
        R2: Destination sprite index where copying begins.
        R3: Number of sprites to copy.
 
-  0x04 SetForegroundSprites
+  0x03 SetForegroundSprites
 
        Copies one or more sprites into the foreground sprite buffer. This is
        meant for the actual sprite pixel data. Refer to the Sprites sections
@@ -60,7 +60,7 @@
        R2: Destination sprite index where copying begins.
        R3: Number of sprites to copy.
 
-  0x05 DrawBackground
+  0x04 DrawBackground
 
        Copies one or more background sprite descriptors to the display.
        This causes the sprites being described to be drawn to an internal
@@ -79,7 +79,7 @@
 
        R3: Number of sprites to copy.
 
-  0x06 DrawForeground
+  0x05 DrawForeground
 
        Copies one or more foreground sprite descriptors to the display.
        This causes the sprites being described to be drawn to an internal
@@ -89,15 +89,15 @@
        R1: Source address from where to read sprite data.
        R2: Number of sprites to copy.
 
-  0x07 ClearBackground
+  0x06 ClearBackground
 
        Clears the background sprite contents.
 
-  0x08 ClearForeground
+  0x07 ClearForeground
 
        Clears the foreground sprite contents.
 
-  0x09 Swap
+  0x08 Swap
 
        Copies the contents of the sprite buffers to the actual display.
 

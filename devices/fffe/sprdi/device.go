@@ -14,8 +14,7 @@ import (
 
 // Known interrupt operations.
 const (
-	_ = iota
-	setBackgroundPalette
+	setBackgroundPalette = iota
 	setForegroundPalette
 	setBackgroundSprites
 	setForegroundSprites

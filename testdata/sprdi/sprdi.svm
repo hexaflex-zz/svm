@@ -4,12 +4,12 @@ const SpriteBufferSize     = 256
 const SpriteSize           = 32
 
 ; List of supported interrupt operations.
-const SetBackgroundPalette = 16#01
-const SetForegroundPalette = 16#02
-const SetBackgroundSprites = 16#03
-const SetForegroundSprites = 16#04
-const DrawBackground       = 16#05
-const DrawForeground       = 16#06
-const ClearBackground      = 16#07
-const ClearForeground      = 16#08
-const Swap                 = 16#09
+const SetBackgroundPalette = 0
+const SetForegroundPalette = 1
+const SetBackgroundSprites = 2
+const SetForegroundSprites = 3
+const DrawBackground       = 4
+const DrawForeground       = 5
+const ClearBackground      = 6
+const ClearForeground      = 7
+const Swap                 = 8
