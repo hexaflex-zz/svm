@@ -1,5 +1,7 @@
 package parser
 
+import "strings"
+
 // List defines a generic collection of nodes and is itself a node.
 type List struct {
 	*nodeBase
@@ -11,6 +13,13 @@ func NewList(pos Position, ntype Type) *List {
 	return &List{
 		nodeBase: newNodeBase(pos, ntype),
 	}
+}
+
+// String returns a human readable string representation of the list.
+func (n *List) String() string {
+	var sb strings.Builder
+	dumpNode(&sb, n, "")
+	return sb.String()
 }
 
 func (n *List) Len() int {

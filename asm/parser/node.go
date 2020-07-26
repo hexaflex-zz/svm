@@ -58,6 +58,7 @@ type Node interface {
 	Position() Position
 	Type() Type
 	Copy() Node
+	String() string
 }
 
 // nodeBase is embedded by concrete node types and ensures

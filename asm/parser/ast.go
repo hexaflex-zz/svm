@@ -185,15 +185,10 @@ func (a *AST) hasFile(filename string) bool {
 	return false
 }
 
-// Dump returns a human readable string representation of the node tree.
-func (a *AST) Dump() string {
+// String returns a human readable string representation of the node tree.
+func (a *AST) String() string {
 	var sb strings.Builder
-
-	a.nodes.Each(func(i int, n Node) error {
-		dumpNode(&sb, n, "")
-		return nil
-	})
-
+	dumpNode(&sb, a.nodes, "")
 	return sb.String()
 }
 

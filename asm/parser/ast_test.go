@@ -15,5 +15,5 @@ func TestAST(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Println(ast.Dump())
+	fmt.Println(ast)
 }

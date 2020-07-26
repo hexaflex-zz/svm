@@ -49,7 +49,7 @@ func dumpAST(c *Config) {
 	w, close := makeWriter(c)
 	defer close()
 
-	fmt.Fprintln(w, ast.Dump())
+	fmt.Fprintln(w, ast)
 }
 
 // buildBinary builds a binary program and writes it to the requested output location.
