@@ -96,7 +96,11 @@ func (a *App) mainLoop() {
 	if time.Since(a.titleUpdated) >= time.Second*2 {
 		a.titleUpdated = time.Now()
 		freq := prettyFrequency(a.cpu.Frequency())
-		a.window.SetTitle(fmt.Sprintf("%s %s - %s", AppName, AppVersion, freq))
+		title := fmt.Sprintf("%s %s", AppName, AppVersion)
+		if a.config.Debug {
+			title += " (debug)"
+		}
+		a.window.SetTitle(fmt.Sprintf("%s - %s", title, freq))
 	}
 
 	glfw.PollEvents()
