@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 12
+ Document rev.: 13
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -88,10 +88,10 @@
   1a | JEZ x       | Jump to address x iff RST/compare == 0
   1b | JNZ x       | Jump to address x iff RST/compare == 1
   1c | CALL x      | Pushes RIP onto the callstack and then jumps to x.
-  1d | CLEZ x      | Pushes RIP onto the callstack.
-     |             | Jumps to x iff RST/compare = 0.
-  1e | CLNZ x      | Pushes RIP onto the callstack.
-     |             | Jumps to x iff RST/compare = 1.
+  1d | CLEZ x      | Pushes RIP onto the callstack and jumps to x iff
+     |             | RST/compare = 0.
+  1e | CLNZ x      | Pushes RIP onto the callstack and jumps to x iff
+     |             | RST/compare = 1.
   1f | RET         | Pops return address from callstack and jumps to it.
  ----|-------------|------------------------------------------------------------
   20 | HWA x y z   | x = <Interrupt index for the device>. Where y is the
