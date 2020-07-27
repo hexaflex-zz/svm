@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0003
- Document rev.: 3
+ Document rev.: 4
 
  GP14 is a simple, 14-button game pad with digital directional controls.
 
@@ -30,8 +30,9 @@
 
     0x01 IsJustPressed
 
-        Sets the compare flag if a given button was pressed since the 
-        last frame.
+        Sets the compare flag if a given button was pressed since the last
+        frame. Note that the justpressed state is reset after this call, section
+        it is only valid once per cycle.
 
         Inputs:
          R1: Button index. Refer to "Button Ids" section for details.
@@ -43,8 +44,9 @@
 
     0x02 IsJustReleased
 
-        Sets the compare flag if a given button was released since the 
-        last frame.
+        Sets the compare flag if a given button was released since the last 
+        frame. Note that the justpressed state is reset after this call, section
+        it is only valid once per cycle.
 
         Inputs:
          R1: Button index. Refer to "Button Ids" section for details.
