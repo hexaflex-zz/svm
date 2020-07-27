@@ -8,15 +8,15 @@ import "test/font"
 :main {
     call $setup
 
-:loop
-    gp14.JmpOnJustPressed gamepadIndex, $gp14.ButtonBack, $exit                ; Exit the program if ButtonBack is pressed.
-    gp14.CallOnJustPressed gamepadIndex, $gp14.ButtonA, $recolor               ; Set text color to something random iff ButtonA was pressed.
-
     mov r0, $sprdi.DrawBackground                                              ; Load text to display.
     mov r1, $str_helloWorld
     mov r2, $(14 * 32 + 10)                                                    ; Center line on display.
     mov r3, $len_helloWorld
     int displayIndex
+
+:loop
+    gp14.JmpOnJustPressed gamepadIndex, $gp14.ButtonBack, $exit                ; Exit the program if ButtonBack is pressed.
+    gp14.CallOnJustPressed gamepadIndex, $gp14.ButtonA, $recolor               ; Set text color to something random iff ButtonA was pressed.
 
     mov r0, $sprdi.Swap                                                        ; Present backbuffer.
     int displayIndex
@@ -47,21 +47,18 @@ import "test/font"
     hwa displayIndex, $16#fffe, $16#0002                                       ; Find the device index for the SPRDI display.
     jez $notFound
 
+    hwa gamepadIndex, $16#fffe, $16#0003                                       ; Find the device index for the GP14 gamepad.
+    jez $notFound
+
     mov r0, $sprdi.SetBackgroundPalette                                        ; Load custom background color palette.
     mov r1, $palette
     int displayIndex
 
-    mov r0, $sprdi.SetForegroundPalette                                        ; Load custom foreground color palette.
-    int displayIndex
-
     mov r0, $sprdi.SetBackgroundSprites                                        ; Load our font.
-    mov r1, $font.Sprites
-    mov r2, $font.ASCIIOffset
-    mov r3, $font.SpriteCount
+    mov r1, $font.Sprites                                                      ;
+    mov r2, $font.ASCIIOffset                                                  ; Text sprites are loaded into the background for this example, so we don't
+    mov r3, $font.SpriteCount                                                  ; have to handle per-sprite positioning. They are aligned to a 2D grid.
     int displayIndex
-
-    hwa gamepadIndex, $16#fffe, $16#0003                                       ; Find the device index for the GP14 gamepad.
-    jez $notFound
     ret
 
 :notFound
