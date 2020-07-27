@@ -2,9 +2,9 @@ import "sprdi"
 import "gp14"
 import "test/font"
 
-:displayIndex d16 0
-:gamepadIndex d16 0
-
+;------------------------------------------------------------------------------
+; Program entrypoint.
+;------------------------------------------------------------------------------
 :main {
     call $setup
 
@@ -26,8 +26,10 @@ import "test/font"
     halt
 }
 
+;------------------------------------------------------------------------------
 ; recolor changes the last color in the background palette to a random value.
 ; This is the color used by our font sprites.
+;------------------------------------------------------------------------------
 :recolor {
     rng palette+30, $0, $16#ffff                                               ; Set the last palette color to something random.
     mov r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
@@ -36,7 +38,9 @@ import "test/font"
     ret
 }
 
+;------------------------------------------------------------------------------
 ; setup initializes various devices properties.
+;------------------------------------------------------------------------------
 :setup {
     seed $0                                                                    ; Set RNG seed to something predictable.
 
@@ -63,6 +67,14 @@ import "test/font"
 :notFound
     halt
 }
+
+
+;------------------------------------------------------------------------------
+; Variables & embedded data
+;------------------------------------------------------------------------------
+:displayIndex d16 0
+:gamepadIndex d16 0
+
 
 const len_helloWorld = 13
 :str_helloWorld
