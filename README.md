@@ -1,5 +1,8 @@
 ## SVM
 
+__note__: This project is strictly for personal educational purposes. Don't expect it
+to be of any practical use.
+
 SVM implements a programmable virtual machine for a fictional 16-bit architecture.
 It comes with an assembler and the runtime. The runtime contains the CPU and a
 number of virtual hardware peripherals which one can interact with through a 
