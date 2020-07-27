@@ -92,6 +92,12 @@ func (a *AST) Parse(r io.Reader, filename string) error {
 			set.Append(n)
 			stack = append(stack, n)
 
+		case tokMacroBegin:
+			n := NewList(pos, Macro)
+			n.Append(NewValue(pos, Ident, value))
+			set.Append(n)
+			stack = append(stack, n)
+
 		case tokExpressionBegin:
 			n := NewList(pos, Expression)
 			set.Append(n)
@@ -151,7 +157,7 @@ func (a *AST) Parse(r io.Reader, filename string) error {
 
 			set.Append(NewValue(pos, String, value))
 
-		case tokInstructionEnd, tokExpressionEnd, tokIfEnd:
+		case tokInstructionEnd, tokMacroEnd, tokExpressionEnd, tokIfEnd:
 			stack[len(stack)-1] = nil
 			stack = stack[:len(stack)-1]
 		}

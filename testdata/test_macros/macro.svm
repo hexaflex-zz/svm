@@ -1,0 +1,9 @@
+
+macro divmod w, x, y, z
+    div w, y, z
+    mod x, y, z
+endmacro
+
+
+:main
+    divmod r0, r1, $2, $42

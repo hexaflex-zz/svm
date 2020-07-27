@@ -15,6 +15,7 @@ const (
 	ScopeEnd
 	Conditional
 	Instruction
+	Macro
 	Expression
 	BreakPoint
 	Constant
@@ -44,6 +45,8 @@ func (t Type) String() string {
 		return "ScopeEnd"
 	case Instruction:
 		return "Instruction"
+	case Macro:
+		return "Macro"
 	case Expression:
 		return "Expression"
 	case Conditional:

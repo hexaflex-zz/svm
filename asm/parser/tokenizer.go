@@ -11,6 +11,8 @@ import (
 const (
 	tokInstructionBegin = 1 + iota
 	tokInstructionEnd
+	tokMacroBegin
+	tokMacroEnd
 	tokExpressionBegin
 	tokExpressionEnd
 	tokScopeBegin
@@ -99,6 +101,7 @@ func (t *tokenizer) readCode() bool {
 	case t.readLabel():
 	case t.readBreakpoint():
 	case t.readIf():
+	case t.readMacro():
 	case t.readInstruction():
 	default:
 		return false
@@ -150,7 +153,7 @@ loop:
 			break loop
 		case t.readCode():
 		default:
-			t.error("unexpected token: '%c'; expected comment, label or instruction", t.read())
+			t.error("unexpected token in scope block: '%c'; expected comment, label, instruction, scope block or '}'", t.read())
 		}
 	}
 
@@ -170,6 +173,40 @@ func (t *tokenizer) readLabel() bool {
 	}
 
 	t.emit(tokLabel)
+	return true
+}
+
+// readMacro reads a full macro definition.
+func (t *tokenizer) readMacro() bool {
+	if !t.readWord("macro") {
+		return false
+	}
+
+	t.ignore()
+	t.readSpace()
+
+	if !t.readName() {
+		t.error("unexpected token %c; expected macro name", t.read())
+	}
+
+	t.emit(tokMacroBegin)
+	defer t.emit(tokMacroEnd)
+
+	for t.readExpression() {
+	}
+
+loop:
+	for {
+		switch {
+		case t.readWord("endmacro"):
+			t.ignore()
+			break loop
+		case t.readCode():
+		default:
+			t.error("unexpected token in macro body: '%c'; expected comment, label, instruction, scope block or 'endmacro'", t.read())
+		}
+	}
+
 	return true
 }
 

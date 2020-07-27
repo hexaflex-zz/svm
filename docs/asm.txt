@@ -2,7 +2,7 @@
  Assembler & Language
 ===============================================================================
 
- Document rev.: 20
+ Document rev.: 21
 
 
 ===============================================================================
@@ -234,6 +234,39 @@
                         | debug mode by the VM, this will pause execution and allows
                         | inspection of memory and registers etc.
  -----------------------|-----------------------------------------------------------
+  macro name args       | Begins a macro definition with the given name and optional
+                        | list of operand names. Refer to the Macros section for
+                        | more information.
+  endmacro              | Ends a macro definition.
+ -----------------------|-----------------------------------------------------------
+
+
+================================================================================
+ Macros
+================================================================================
+
+ Macro definitions wrap one or more instructions in a custom instruction name.
+ These can be used as shorthand for a sequence of instructions you want inlined,
+ but don't want to have to repeat over and over. A macro has a name by which it
+ is referenced. As well as an optional list of operands. These are idents by
+ which invocation arguments are referenced in the macro itself.
+ For instance, the macro:
+
+   macro divmod w, x, y, z
+      div w, y, z
+      mod x, y, z
+   endmacro
+
+Can be invoked as follows:
+
+   divmod r0, r1, $2, $42
+
+The assembler will replace any occurance of the above with the contents if the 
+macro definition, replacing the operand names with the actual expressions being
+passed by the programmer:
+
+   div r0, $2, $42
+   mod r1, $2, $42
 
 
 ================================================================================

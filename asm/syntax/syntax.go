@@ -36,11 +36,43 @@ func Verify(ast *parser.AST) error {
 		return err
 	}
 
+	if err := testMacros(ast.Nodes()); err != nil {
+		return err
+	}
+
 	if err := testInstructions(ast.Nodes()); err != nil {
 		return err
 	}
 
 	return testNumbers(ast.Nodes())
+}
+
+// testMacros finds macro definitions and ensures they have a sane layout.
+func testMacros(nodes *parser.List) error {
+	return nodes.Each(func(_ int, n parser.Node) error {
+		if n.Type() != parser.Macro {
+			return nil
+		}
+
+		macro := n.(*parser.List)
+
+		if macro.Len() < 1 {
+			return NewError(macro.Position(), "invalid macro definition; missing name")
+		}
+
+		if macro.At(0).Type() != parser.Ident {
+			return NewError(macro.At(0).Position(), "invalid macro name; expected ident")
+		}
+
+		for i := 1; i < macro.Len() && macro.At(i).Type() == parser.Expression; i++ {
+			expr := macro.At(i).(*parser.List)
+			if expr.Len() != 1 || expr.At(0).Type() != parser.Ident {
+				return NewError(expr.At(0).Position(), "invalid macro operand; expected ident")
+			}
+		}
+
+		return nil
+	})
 }
 
 // fixScopeNames finds all empty ScopeBegin nodes and generates unique names for them.
@@ -77,6 +109,13 @@ func fixScopeNames(nodes *parser.List) error {
 func translateConst(nodes *parser.List) error {
 	for i := 0; i < nodes.Len(); i++ {
 		n := nodes.At(i)
+
+		if n.Type() == parser.Macro {
+			if err := translateConst(n.(*parser.List)); err != nil {
+				return err
+			}
+			continue
+		}
 
 		if n.Type() != parser.Constant {
 			continue
@@ -115,12 +154,19 @@ func translateConst(nodes *parser.List) error {
 // with the specified expression.
 func replaceConst(nodes *parser.List, name string, expr []parser.Node) error {
 	for i := 0; i < nodes.Len(); i++ {
+		n := nodes.At(i)
+
+		if n.Type() == parser.Macro {
+			if err := replaceConst(n.(*parser.List), name, expr); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if (nodes.Type() == parser.Instruction && i < 1) ||
 			(nodes.Type() == parser.Constant && i < 2) {
 			continue
 		}
-
-		n := nodes.At(i)
 
 		if instr, ok := n.(*parser.List); ok {
 			if err := replaceConst(instr, name, expr); err != nil {
@@ -152,6 +198,13 @@ func replaceConst(nodes *parser.List, name string, expr []parser.Node) error {
 func translateIf(nodes *parser.List) error {
 	for i := 0; i < nodes.Len(); i++ {
 		n := nodes.At(i)
+
+		if n.Type() == parser.Macro {
+			if err := translateIf(n.(*parser.List)); err != nil {
+				return err
+			}
+			continue
+		}
 
 		if n.Type() != parser.Conditional {
 			continue
@@ -248,6 +301,10 @@ func indexOfOperator(expr *parser.List) int {
 // testInstructions ensures instructions are properly formatted and refer to valid opcodes.
 func testInstructions(nodes *parser.List) error {
 	return nodes.Each(func(_ int, n parser.Node) error {
+		if n.Type() == parser.Macro {
+			return testInstructions(n.(*parser.List))
+		}
+
 		if n.Type() != parser.Instruction {
 			return nil
 		}
@@ -260,16 +317,11 @@ func testInstructions(nodes *parser.List) error {
 
 		name := instr.At(0).(*parser.Value)
 		opcode, ok := arch.Opcode(name.Value)
-		if !ok {
-			if isDataDirective(name.Value) {
-				return nil
+		if ok {
+			argc := arch.Argc(opcode)
+			if argc != instr.Len()-1 {
+				return NewError(name.Position(), "invalid operand count for instruction %q; expected %d", name.Value, argc)
 			}
-			return NewError(name.Position(), "unknown instruction %q", name.Value)
-		}
-
-		argc := arch.Argc(opcode)
-		if argc != instr.Len()-1 {
-			return NewError(name.Position(), "invalid operand count for instruction %q; expected %d", name.Value, argc)
 		}
 
 		for i := 1; i < instr.Len(); i++ {
@@ -317,11 +369,18 @@ func testNumbers(nodes *parser.List) error {
 // fixAliases finds uses of import aliases and replaces the alias part with full import paths.
 func fixAliases(nodes *parser.List, aliases map[string]string) error {
 	return nodes.Each(func(_ int, n parser.Node) error {
+		if n.Type() == parser.Macro {
+			return fixAliases(n.(*parser.List), aliases)
+		}
+
 		if n.Type() != parser.Instruction && n.Type() != parser.Constant {
 			return nil
 		}
 
 		instr := n.(*parser.List)
+
+		name := instr.At(0).(*parser.Value)
+		fixAliasIdent(name, aliases)
 
 		for i := 1; i < instr.Len(); i++ {
 			expr := instr.At(i).(*parser.List)
@@ -352,8 +411,18 @@ func fixAliasIdent(ident *parser.Value, aliases map[string]string) {
 // Returns a mapping of aliases to path names. Import nodes are removed.
 func parseImports(nodes *parser.List) (map[string]string, error) {
 	aliases := make(map[string]string)
+	return aliases, parseImportsRec(nodes, aliases)
+}
+
+func parseImportsRec(nodes *parser.List, aliases map[string]string) error {
 	for i := 0; i < nodes.Len(); i++ {
 		n := nodes.At(i)
+
+		if n.Type() == parser.Macro {
+			if err := parseImportsRec(n.(*parser.List), aliases); err != nil {
+				return err
+			}
+		}
 
 		instr, ok := isInstruction(n, "import")
 		if !ok {
@@ -366,7 +435,7 @@ func parseImports(nodes *parser.List) (map[string]string, error) {
 			switch expr.Len() {
 			case 1:
 				if expr.At(0).Type() != parser.String {
-					return nil, NewError(expr.At(0).Position(), "invalid import path; expected string")
+					return NewError(expr.At(0).Position(), "invalid import path; expected string")
 				}
 
 				// create an alias from the last portion of the path.
@@ -377,13 +446,13 @@ func parseImports(nodes *parser.List) (map[string]string, error) {
 				aliases[alias] = path
 
 			default:
-				return nil, NewError(expr.Position(), "import statement must have either one or two operands; did you forget a comma?")
+				return NewError(expr.Position(), "import statement must have either one or two operands; did you forget a comma?")
 			}
 
 		case 3:
 			expr := instr.At(1).(*parser.List)
 			if expr.At(0).Type() != parser.Ident {
-				return nil, NewError(expr.At(0).Position(), "invalid import alias; expected ident")
+				return NewError(expr.At(0).Position(), "invalid import alias; expected ident")
 			}
 
 			alias := expr.At(0).(*parser.Value).Value
@@ -391,21 +460,20 @@ func parseImports(nodes *parser.List) (map[string]string, error) {
 
 			expr = instr.At(2).(*parser.List)
 			if expr.At(0).Type() != parser.String {
-				return nil, NewError(expr.At(0).Position(), "invalid import path; expected string")
+				return NewError(expr.At(0).Position(), "invalid import path; expected string")
 			}
 
 			path := expr.At(0).(*parser.Value).Value
 			aliases[alias] = path
 
 		default:
-			return nil, NewError(instr.Position(), "import statement must have either one or two operands")
+			return NewError(instr.Position(), "import statement must have either one or two operands")
 		}
 
 		nodes.Remove(i)
 		i--
 	}
-
-	return aliases, nil
+	return nil
 }
 
 // isInstruction returns true if n is an instruction with the given name.

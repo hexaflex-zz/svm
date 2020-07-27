@@ -15,17 +15,19 @@ import (
 
 // assembler holds assembler context. It turns the source AST for a single module into a binary archive.
 type assembler struct {
-	ar      *ar.Archive    // Target archive.
-	symbols map[string]int // Table of labels or constants mapped to their respective addresses and values.
-	address int            // Address at which next instruction is written.
-	flags   ar.DebugFlags  // Optional one-shot flags to be provided with debug symbols.
-	debug   bool           // Emit debug symbols?
+	ar      *ar.Archive             // Target archive.
+	symbols map[string]int          // Table of labels or constants mapped to their respective addresses and values.
+	macros  map[string]*parser.List // Macro definitions.
+	address int                     // Address at which next instruction is written.
+	flags   ar.DebugFlags           // Optional one-shot flags to be provided with debug symbols.
+	debug   bool                    // Emit debug symbols?
 }
 
 func newAssembler(debug bool) *assembler {
 	return &assembler{
 		ar:      ar.New(),
 		symbols: make(map[string]int),
+		macros:  make(map[string]*parser.List),
 		debug:   debug,
 	}
 }
@@ -34,6 +36,14 @@ func newAssembler(debug bool) *assembler {
 // Any provided options dictate custom assembler behaviour.
 func (a *assembler) assemble(ast *parser.AST, module string) (*ar.Archive, error) {
 	if err := syntax.Verify(ast); err != nil {
+		return nil, err
+	}
+
+	if err := a.resolveMacros(ast.Nodes(), ""); err != nil {
+		return nil, err
+	}
+
+	if err := a.replaceMacroInvocations(ast.Nodes(), ""); err != nil {
 		return nil, err
 	}
 
@@ -89,6 +99,34 @@ func (a *assembler) evaluateConstants(nodes *parser.List, scope parser.Scope) er
 	})
 }
 
+// evaluateConstant evaluates the given constant expression.
+func (a *assembler) evaluateConstant(instr *parser.List, scope parser.Scope) error {
+	err := eval.Evaluate(instr, a.resolveReference, scope)
+	if err != nil {
+		return err
+	}
+
+	name := instr.At(0).(*parser.Value).Value
+	expr := instr.At(1).(*parser.List)
+
+	if expr.Len() != 1 || expr.At(0).Type() != parser.Number {
+		return newError(expr.Position(), "invalid constant expression")
+	}
+
+	key := string(scope.Join(name))
+	key = strings.ToLower(key)
+
+	if _, ok := a.symbols[key]; ok {
+		return newError(instr.Position(), "duplicate symbol %q", name)
+	}
+
+	value := expr.At(0).(*parser.Value).Value
+	num, _ := parser.ParseNumber(value)
+
+	a.symbols[key] = int(num)
+	return nil
+}
+
 // evaluateInstructions evaluates all compile-time expressions in the given node list.
 func (a *assembler) evaluateInstructions(nodes *parser.List, scope parser.Scope) error {
 	a.address = 0
@@ -108,40 +146,6 @@ func (a *assembler) evaluateInstructions(nodes *parser.List, scope parser.Scope)
 
 		return nil
 	})
-}
-
-// evaluateConstant evaluates the given constant expression.
-func (a *assembler) evaluateConstant(instr *parser.List, scope parser.Scope) error {
-	err := eval.Evaluate(instr, a.resolveReference, scope)
-	if err != nil {
-		return err
-	}
-
-	name := instr.At(0).(*parser.Value).Value
-	expr := instr.At(1).(*parser.List)
-
-	if expr.Len() != 1 || expr.At(0).Type() != parser.Number {
-		return newError(expr.Position(), "invalid constant expression")
-	}
-
-	key := string(scope.Join(name))
-
-	if _, ok := a.symbols[strings.ToLower(key)]; ok {
-		return newError(instr.Position(), "duplicate symbol %q", name)
-	}
-
-	value := expr.At(0).(*parser.Value).Value
-	num, _ := parser.ParseNumber(value)
-
-	a.addSymbol(key, int(num))
-
-	return nil
-}
-
-// addSymbol adds the given symbol and its value to the symbol table.
-// Optionally also to the output archive if debug output is enabled.
-func (a *assembler) addSymbol(name string, value int) {
-	a.symbols[strings.ToLower(name)] = value
 }
 
 //isExternalReference returns true if name represents a reference to an external module.
@@ -189,6 +193,158 @@ func (a *assembler) resolveReference(scope parser.Scope, name string) (int, erro
 	return 0, fmt.Errorf("reference to unresolved value %s", name)
 }
 
+// resolveMacros finds the macro defintions and adds them to the macro table in the assembler context.
+// The definition is then removed from the AST.
+func (a *assembler) resolveMacros(nodes *parser.List, scope parser.Scope) error {
+	for i := 0; i < nodes.Len(); i++ {
+		n := nodes.At(i)
+
+		if n.Type() == parser.ScopeBegin {
+			scope = scope.Join(n.(*parser.Value).Value)
+			continue
+		}
+
+		if n.Type() == parser.ScopeEnd {
+			scope, _ = scope.Split()
+			continue
+		}
+
+		if n.Type() != parser.Macro {
+			continue
+		}
+
+		macro := n.(*parser.List)
+		name := macro.At(0).(*parser.Value)
+		name.Value = scope.Join(name.Value).String()
+
+		if a.hasSymbol(name.Value) {
+			return newError(name.Position(), "duplicate symbol definition %q", name.Value)
+		}
+
+		a.macros[strings.ToLower(name.Value)] = macro
+		nodes.Remove(i)
+		i--
+	}
+	return nil
+}
+
+// replaceMacroInvocations finds macro invications and replaces them with the respective macro's body.
+func (a *assembler) replaceMacroInvocations(nodes *parser.List, scope parser.Scope) error {
+	for i := 0; i < nodes.Len(); i++ {
+		n := nodes.At(i)
+
+		if n.Type() == parser.ScopeBegin {
+			scope = scope.Join(n.(*parser.Value).Value)
+			continue
+		}
+
+		if n.Type() == parser.ScopeEnd {
+			scope, _ = scope.Split()
+			continue
+		}
+
+		if n.Type() != parser.Instruction {
+			continue
+		}
+
+		instr := n.(*parser.List)
+		name := instr.At(0).(*parser.Value)
+
+		macro := a.findMacro(name.Value, scope)
+		if macro == nil {
+			continue
+		}
+
+		// We are about to alter the body of this macro.
+		// Do this on a copy, not the original.
+		macro = macro.Copy().(*parser.List)
+
+		values := instr.Slice()[1:]
+		names := macroArgs(macro, 0)
+		body := macro.Slice()[len(names)+1:]
+		replaceMacroContents(body, values, names)
+
+		nodes.ReplaceAt(i, body...)
+	}
+	return nil
+}
+
+// findMacro returns the macro with the given (scoped) name. Returns nil if it can't be found.
+func (a *assembler) findMacro(name string, scope parser.Scope) *parser.List {
+	key := strings.ToLower(name)
+
+	if m, ok := a.macros[key]; ok {
+		return m
+	}
+
+	// Check the local scope.
+	key = scope.Join(key).String()
+	if m, ok := a.macros[key]; ok {
+		return m
+	}
+
+	// Search all the way up the scope tree.
+	for len(scope) > 0 {
+		scope, _ = scope.Split()
+
+		key = scope.Join(name).String()
+		key = strings.ToLower(key)
+
+		if m, ok := a.macros[key]; ok {
+			return m
+		}
+	}
+
+	return nil
+}
+
+// replaceMacroContents traverses instructions in body and replaces occurrences of idents from names
+// with their counterparts in values.
+func replaceMacroContents(body, values []parser.Node, names []*parser.Value) {
+	for _, n := range body {
+		if n.Type() != parser.Instruction {
+			continue
+		}
+
+		instr := n.(*parser.List)
+		for j := 1; j < instr.Len(); j++ {
+			expr := instr.At(j).(*parser.List)
+			for k := 0; k < expr.Len(); k++ {
+				x := indexOfIdent(names, expr.At(k))
+				if x == -1 {
+					continue
+				}
+
+				if values[x].Type() != parser.Expression {
+					expr.ReplaceAt(k, values[x])
+				} else {
+					// unpack expression
+					vexpr := values[x].(*parser.List)
+					expr.ReplaceAt(k, vexpr.Slice()...)
+				}
+			}
+		}
+	}
+}
+
+// indexOfIdent returns the index of ident n in set.
+// Returns -1 if n is not an ident or the value is not in set.
+func indexOfIdent(set []*parser.Value, n parser.Node) int {
+	if n.Type() != parser.Ident {
+		return -1
+	}
+
+	nvalue := n.(*parser.Value).Value
+
+	for i, v := range set {
+		if strings.EqualFold(v.Value, nvalue) {
+			return i
+		}
+	}
+
+	return -1
+}
+
 // resolveLabels finds all label definitionsin the given set and resolves their addresses.
 // The given scope name is prefixed to the label name. Label definitions are removed.
 func (a *assembler) resolveLabels(nodes *parser.List, scope parser.Scope) error {
@@ -215,17 +371,25 @@ func (a *assembler) resolveLabels(nodes *parser.List, scope parser.Scope) error 
 		lbl := n.(*parser.Value)
 		lbl.Value = scope.Join(lbl.Value).String()
 
-		if _, ok := a.symbols[strings.ToLower(lbl.Value)]; ok {
+		if a.hasSymbol(lbl.Value) {
 			return newError(lbl.Position(), "duplicate definition name %q", lbl.Value)
 		}
 
-		a.addSymbol(lbl.Value, a.address)
+		a.symbols[strings.ToLower(lbl.Value)] = a.address
 
 		nodes.Remove(i)
 		i--
 	}
 
 	return nil
+}
+
+// hasSymbol returns true if the given symbol is defined as either a label, constant or macro.
+func (a *assembler) hasSymbol(name string) bool {
+	name = strings.ToLower(name)
+	_, ok1 := a.symbols[name]
+	_, ok2 := a.macros[name]
+	return ok1 || ok2
 }
 
 // compile compiles all given instructions.
@@ -238,7 +402,10 @@ func (a *assembler) compile(nodes *parser.List) error {
 			a.flags |= ar.Breakpoint
 
 		case parser.Instruction:
-			code := a.encode(n.(*parser.List))
+			code, err := a.encode(n.(*parser.List))
+			if err != nil {
+				return err
+			}
 			a.emit(n.Position(), code)
 		}
 
@@ -285,13 +452,16 @@ func (a *assembler) addDebugFile(file string) int {
 }
 
 // encode encodes the given instruction into its final binary form.
-func (a *assembler) encode(instr *parser.List) []byte {
+func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	if size, ok := isDataDirective(instr); ok {
-		return encodeDataDirective(instr, size)
+		return encodeDataDirective(instr, size), nil
 	}
 
-	name := instr.At(0).(*parser.Value).Value
-	opcode, _ := arch.Opcode(name)
+	name := instr.At(0).(*parser.Value)
+	opcode, ok := arch.Opcode(name.Value)
+	if !ok {
+		return nil, newError(name.Position(), "unknown instruction %q", name.Value)
+	}
 
 	out := make([]byte, 1, encodedLen(instr))
 	out[0] = byte(opcode)
@@ -325,6 +495,31 @@ func (a *assembler) encode(instr *parser.List) []byte {
 		} else {
 			out = append(out, mode<<6, byte(num>>8), byte(num))
 		}
+	}
+
+	return out, nil
+}
+
+// encodeMacroInvocation replaces the given invocation with the specified macro contents and
+// returns their encoded versions.
+func encodeMacroInvocation(macro, invocation *parser.List) ([]byte, error) {
+	argv := invocation.Slice()[1:]
+	args := macroArgs(macro, len(argv))
+
+	if len(argv) != len(args) {
+		return nil, newError(invocation.Position(), "invalid number of arguments in macro invocation; expected %d, have %d", len(args), len(argv))
+	}
+
+	return nil, nil
+}
+
+// macroArgs returns the given macro's operands as a list of idents.
+func macroArgs(macro *parser.List, size int) []*parser.Value {
+	out := make([]*parser.Value, 0, size)
+
+	for i := 1; i < macro.Len() && macro.At(i).Type() == parser.Expression; i++ {
+		expr := macro.At(i).(*parser.List)
+		out = append(out, expr.At(0).(*parser.Value))
 	}
 
 	return out
