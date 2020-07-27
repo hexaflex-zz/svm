@@ -51,7 +51,10 @@ func (a *App) Run() error {
 
 	log.Println(Version())
 	printHelp()
-	a.loadProgram()
+
+	if err := a.loadProgram(); err != nil {
+		log.Println(err)
+	}
 
 	if !a.config.Debug {
 		a.cpu.Start()
