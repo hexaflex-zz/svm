@@ -36,3 +36,8 @@ language, the architecture and how to interact with peripherals.
 * __docs__: Contains text files with documentation for various components.
 * __testdata__: Contains sample SVM source code and some other testing things.
 
+
+## Lisence
+
+Unless otherwise stated, this project and its contents are provided under a 3-Clause BSD lisence.
+Refer to the LICENSE file for its contents.
