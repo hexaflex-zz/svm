@@ -9,21 +9,9 @@ import "test/font"
     call $setup
 
 :loop
-    mov r0, $gp14.IsJustPressed                                                ; Exit the program if ButtonBack is pressed.
-    mov r1, $gp14.ButtonBack
-    int gamepadIndex
-    jnz $exit
+    gp14.JmpOnJustPressed gamepadIndex, $gp14.ButtonBack, $exit                ; Exit the program if ButtonBack is pressed.
+    gp14.CallOnJustPressed gamepadIndex, $gp14.ButtonA, $recolor               ; Set text color to something random iff ButtonA was pressed.
 
-    mov r1, $gp14.ButtonA                                                      ; Set text color to something random iff ButtonA was pressed.
-    int gamepadIndex
-    jez $skip_recolor
-
-    rng palette+30, $0, $16#ffff                                               ; Set the last palette color to something random.
-    mov r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
-    mov r1, $palette
-    int displayIndex
-
-:skip_recolor
     mov r0, $sprdi.DrawBackground                                              ; Load text to display.
     mov r1, $str_helloWorld
     mov r2, $(14 * 32 + 10)                                                    ; Center line on display.
@@ -36,6 +24,16 @@ import "test/font"
 
 :exit
     halt
+}
+
+; recolor changes the last color in the background palette to a random value.
+; This is the color used by our font sprites.
+:recolor {
+    rng palette+30, $0, $16#ffff                                               ; Set the last palette color to something random.
+    mov r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
+    mov r1, $palette
+    int displayIndex
+    ret
 }
 
 ; setup initializes various devices properties.
