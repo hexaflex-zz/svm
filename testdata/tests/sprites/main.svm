@@ -1,6 +1,6 @@
 import "sprdi"
 import "gp14"
-import "test/font"
+import "tests/sprites/font"
 
 ;------------------------------------------------------------------------------
 ; Program entrypoint.
