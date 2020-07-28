@@ -14,6 +14,7 @@ import (
 	"github.com/hexaflex/svm/arch"
 	"github.com/hexaflex/svm/asm/ar"
 	"github.com/hexaflex/svm/devices/fffe/cpu"
+	"github.com/hexaflex/svm/devices/fffe/fd35"
 	"github.com/hexaflex/svm/devices/fffe/gp14"
 	"github.com/hexaflex/svm/devices/fffe/sprdi"
 )
@@ -36,7 +37,10 @@ func NewApp(config *Config) *App {
 	a.config = config
 	a.display = sprdi.New()
 	a.gamepad = gp14.New()
-	a.cpu = NewCPUController(a.printTrace, a.display, a.gamepad)
+	a.cpu = NewCPUController(a.printTrace,
+		a.display,
+		a.gamepad,
+		fd35.New(config.FddImage, config.FddWriteProtected))
 	return &a
 }
 
@@ -223,9 +227,11 @@ func (a *App) loadProgram() error {
 
 	a.debugData = &ar.Debug
 
-	a.cpu.Shutdown()
-	a.cpu.Startup(ar.Instructions, ar.Entrypoint)
-	return nil
+	if err = a.cpu.Shutdown(); err != nil {
+		return err
+	}
+
+	return a.cpu.Startup(ar.Instructions, ar.Entrypoint)
 }
 
 // printTrace prints instruction trace data. This can be toggled

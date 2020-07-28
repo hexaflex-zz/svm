@@ -11,8 +11,12 @@ type Config struct {
 	Program     string // Path to program binary.
 	ScaleFactor int    // Amount by which each pixel is scaled (virtual resolution)
 	Fullscreen  bool   // Run in fullscreen?
-	Debug       bool   // Enable debug mode? This handles breakpoints if enabled.
-	PrintTrace  bool   // Print instruction trace data?
+
+	Debug      bool // Enable debug mode? This handles breakpoints if enabled.
+	PrintTrace bool // Print instruction trace data?
+
+	FddImage          string // File containing floppy disk image.
+	FddWriteProtected bool   // Is the loaded floppy disk read-only?
 }
 
 // parseArgs parses command line arguments as applicable.
@@ -31,9 +35,14 @@ func parseArgs() *Config {
 		flag.PrintDefaults()
 	}
 
+	flag.StringVar(&c.FddImage, "fdd-img", c.FddImage, "File containing floppy disk image.")
+	flag.BoolVar(&c.FddWriteProtected, "fdd-wp", c.FddWriteProtected, "Is the loaded floppy disk write protected?")
+
 	flag.BoolVar(&c.Debug, "debug", c.Debug, "Run in debug mode.")
+
 	flag.IntVar(&c.ScaleFactor, "scale-factor", c.ScaleFactor, "Pixel scale factor for the display.")
 	flag.BoolVar(&c.Fullscreen, "fullscreen", c.Fullscreen, "Run the display in fullscreen or windowed mode.")
+
 	version := flag.Bool("version", false, "Display version information.")
 	flag.Parse()
 
