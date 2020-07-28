@@ -1,0 +1,28 @@
+
+;------------------------------------------------------------------------------
+; Interrupt operation Ids
+;------------------------------------------------------------------------------
+const ReadState   = 0
+const ReadSector  = 1
+const WriteSector = 2
+
+
+;------------------------------------------------------------------------------
+; Device States
+;------------------------------------------------------------------------------
+const StateNoMedia  = 0
+const StateReady    = 1
+const StateReadyWP  = 2
+const StateBusy     = 3
+
+
+;------------------------------------------------------------------------------
+; Error Codes
+;------------------------------------------------------------------------------
+const ErrorNone        = 0
+const ErrorBusy        = 1
+const ErrorNoMedia     = 2
+const ErrorProtected   = 3
+const ErrorEject       = 4
+const ErrorBadSector   = 5
+const ErrorBroken      = 6
