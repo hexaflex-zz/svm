@@ -1,0 +1,88 @@
+===============================================================================
+ FD35 - 3.5" Floppy disk Drive
+===============================================================================
+
+ Manufacturer:  0xFFFE
+ Serialno.:     0x0004
+ Document rev.: 1
+
+ FD35 is a generic 3.5" floppy disk drive.
+
+ Supported floppy disks are split into 80 tracks, each with 18 sectors.
+ For a total of 1440 sectors with 1024 bytes of data each.
+ 
+ The FD35 works asynchronously, and has a raw read/write speed of 64kb/s.
+ Track seeking time is about 3 milliseconds per track.
+
+
+===============================================================================
+ Interrupts
+===============================================================================
+
+ The device is controlled through interrupts. Arguments for these operations
+ are provided through registers R0, R1 and R2.
+
+   0x00 ReadState
+
+      Yields the current device state. 
+
+      Outputs:
+         R0: Current device state. Refer to the Device States section
+             for details.
+         R1: Either 0 or the last error since the last ReadState call.
+             Refer to the Error Codes section for details.
+
+   0x01 ReadSector
+
+      Copies one sector worth of data from floppy disk into system memory.
+      Reading is only possible of the current state is StateReady or
+      StateReadyWP. Partial reads are not possible.
+   
+      Inputs:
+         R1: Target address to copy data to.
+         R2: Sector number to read from.
+
+      Outputs:
+         RST/compare: 1 iff reading is possible and has been started,
+                      0 otherwise.
+
+   0x02 WriteSector
+
+      Copies one sector worth of data from system memory onto the disk.
+      Writing is only possible of the current state is StateReady.
+      Partial writes are not possible.
+   
+      Inputs:
+         R1: Target Sector number to copy data to.
+         R2: Memory address to read from.
+
+      Outputs:
+         RST/compare: 1 iff writing is possible and has been started,
+                      0 otherwise.
+
+
+
+===============================================================================
+ Device States
+===============================================================================
+
+   0x00  StateNoMedia          There is no disk present in the drive, or the
+                               disk is damaged/corrupted.
+   0x01  StateReady            Device is idle and ready for reading or writing.
+   0x02  StateReadyWP          Device is idle and ready for reading. Disk is
+                               write protected.
+   0x03  StateBusy             The drive is currently reading or writing.
+
+
+===============================================================================
+ Error Codes
+===============================================================================
+
+   0x00 ErrorNone              There's been no error since the last poll.
+   0x01 ErrorBusy              Drive is busy performing an action.
+   0x02 ErrorNoMedia           Attempt to read or write with no floppy inserted.
+   0x03 ErrorProtected         Attempt to write to write protected disk.
+   0x04 ErrorEject             The disk was removed while reading or writing.
+   0x05 ErrorBadSector         The requested sector is broken, the data on it is lost.
+   0x06 ErrorBroken            There's been some major software or hardware problem,
+                               try turning it off and on again.
