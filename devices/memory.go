@@ -31,6 +31,7 @@ type Memory interface {
 
 	// Read reads len(p) bytes from memory into p, starting at the given address.
 	Read(address int, p []byte)
+
 	// RSTCompare defines the state of the RST/compare flag.
 	RSTCompare() bool
 	SetRSTCompare(v bool)
