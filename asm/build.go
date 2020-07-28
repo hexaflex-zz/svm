@@ -67,7 +67,12 @@ func buildAST(ast *parser.AST, importpath, module string, queue []string) error 
 
 	// Load them all into an AST.
 	newAst := parser.NewAST()
-	newAst.Nodes().Append(parser.NewValue(parser.Position{}, parser.ScopeBegin, module))
+
+	// Add ScopeBegin nodes for each segment in the module name.
+	scopes := scopeNames(module)
+	for _, name := range scopes {
+		newAst.Nodes().Append(parser.NewValue(parser.Position{}, parser.ScopeBegin, name))
+	}
 
 	for _, file := range sources {
 		if err := newAst.ParseFile(file); err != nil {
@@ -75,11 +80,22 @@ func buildAST(ast *parser.AST, importpath, module string, queue []string) error 
 		}
 	}
 
-	newAst.Nodes().Append(parser.NewValue(parser.Position{}, parser.ScopeEnd, ""))
+	// Add ScopeEnd nodes for each segment in the module name.
+	for range scopes {
+		newAst.Nodes().Append(parser.NewValue(parser.Position{}, parser.ScopeEnd, ""))
+	}
 
 	err = testCircularImportsAST(newAst, importpath, queue)
 	ast.Merge(newAst)
 	return err
+}
+
+// newScope turns the given name into a sequence of scope names (in reverse order).
+func scopeNames(module string) []string {
+	sep := string(os.PathSeparator)
+	module = strings.Replace(module, "/", sep, -1)
+	module = filepath.Clean(module)
+	return strings.Split(module, sep)
 }
 
 // testCircularImportsAST finds all import statenents in the given AST and checks them recursively.
