@@ -58,5 +58,5 @@ language, the architecture and how to interact with peripherals.
 
 ## License
 
-Unless otherwise stated, this project and its contents are provided under a 3-Clause BSD lisence.
+Unless otherwise stated, this project and its contents are provided under a 3-Clause BSD license.
 Refer to the LICENSE file for its contents.
