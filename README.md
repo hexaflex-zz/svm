@@ -38,6 +38,24 @@ language, the architecture and how to interact with peripherals.
 * __testdata__: Contains sample SVM source code and some other testing things.
 
 
+### TODO
+
+* Think about whether we want/need a bootloader which can boot code directly from a
+  mounted floppy disk.
+  * Settle on a filesystem for the floppy disk.
+  * Have `cmd/svm-fdd` implement formatting of floppy disks to this filesystem.
+  * Add functionality to `cmd/svm-fdd` to allow generating an image from some set of input
+    resources. This hinges on having a filesystem defined.
+* Add audio support.
+  * Create a specification for a audio hardware.
+  * Create a device implementation of the specification.
+  * Create test code to illustrate use of the device.
+* Add network support?
+  * Create a specification for a network adapter.
+  * Create a device implementation of the specification.
+  * Create test code to illustrate use of the device.
+
+
 ## License
 
 Unless otherwise stated, this project and its contents are provided under a 3-Clause BSD lisence.
