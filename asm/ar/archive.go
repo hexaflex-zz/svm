@@ -20,7 +20,6 @@ import (
 type Archive struct {
 	Debug        Debug  // Optional debug symbols.
 	Instructions []byte // Compiled code.
-	Entrypoint   int    // Address for program entrypoint.
 }
 
 // New creates a new, empty archive.
@@ -38,7 +37,6 @@ func (a *Archive) Load(r io.Reader) (err error) {
 	defer gz.Close()
 	defer recoverOnPanic(&err)
 
-	a.Entrypoint = int(readU16(gz))
 	a.Debug.read(gz)
 	a.Instructions = readBytes(gz)
 	return
@@ -51,7 +49,6 @@ func (a *Archive) Save(w io.Writer) (err error) {
 	gz := gzip.NewWriter(w)
 	defer gz.Close()
 
-	writeU16(gz, uint16(a.Entrypoint))
 	a.Debug.write(gz)
 	writeBytes(gz, a.Instructions)
 	return
@@ -91,7 +88,6 @@ func (a *Archive) String() string {
 	}
 
 	if len(a.Instructions) > 0 {
-		fmt.Fprintf(&sb, "Entrypoint: %04x\n", a.Entrypoint)
 		fmt.Fprintf(&sb, "Instructions:\n")
 		fmt.Fprintf(&sb, "%s\n", hex.Dump(a.Instructions))
 	}
