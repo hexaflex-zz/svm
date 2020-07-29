@@ -153,3 +153,15 @@ func (n *List) ReplaceAt(index int, set ...Node) {
 		n.children = out
 	}
 }
+
+// InsertAt inserts one or more nodes at the given index.
+func (n *List) InsertAt(index int, set ...Node) {
+	if len(set) == 0 {
+		return
+	}
+
+	out := append(n.children, set...)
+	copy(out[index+len(set):], out[index:])
+	copy(out[index:], set)
+	n.children = out
+}
