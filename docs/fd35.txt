@@ -4,15 +4,16 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0004
- Document rev.: 1
+ Document rev.: 2
 
  FD35 is a generic 3.5" floppy disk drive.
 
  Supported floppy disks are split into 80 tracks, each with 18 sectors.
  For a total of 1440 sectors with 1024 bytes of data each.
  
- The FD35 works asynchronously, and has a raw read/write speed of 64kb/s.
- Track seeking time is about 3 milliseconds per track.
+ The FD35 works asynchronously, and has a raw read/write speed of 256Kb/s.
+ This means a complete sector transfers in approximatly 4 seconds.
+ Track seeking time is approximatly 3 milliseconds per track.
 
 
 ===============================================================================
