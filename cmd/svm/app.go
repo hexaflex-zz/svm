@@ -234,7 +234,7 @@ func (a *App) loadProgram() error {
 func (a *App) loadDebugData() {
 	a.debug.Clear()
 
-	fd, err := os.Open(a.floppy.File() + ".dbg")
+	fd, err := os.Open(a.config.Image + ".dbg")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return // Is ok.
