@@ -18,7 +18,7 @@ const (
 	SectorsPerTrack    = 18
 	BytesPerSector     = 1024
 	FloppySize         = TrackCount * SectorsPerTrack * BytesPerSector
-	BytesPerSecond     = 256
+	BytesPerSecond     = 1024
 	TrackSeekTime      = time.Millisecond * 3
 	SectorTransferTime = (time.Second * BytesPerSector) / BytesPerSecond
 )
