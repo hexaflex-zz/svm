@@ -315,9 +315,10 @@ func testInstructions(nodes *parser.List) error {
 			return NewError(instr.At(0).Position(), "invalid instruction name; expected ident")
 		}
 
+		// Check f the instruction is known. If not, this is not an error. We mau be dealing
+		// with a macro reference of an assembler directive.
 		name := instr.At(0).(*parser.Value)
-		opcode, ok := arch.Opcode(name.Value)
-		if ok {
+		if opcode, ok := arch.Opcode(name.Value); ok {
 			argc := arch.Argc(opcode)
 			if argc != instr.Len()-1 {
 				return NewError(name.Position(), "invalid operand count for instruction %q; expected %d", name.Value, argc)
@@ -333,15 +334,6 @@ func testInstructions(nodes *parser.List) error {
 
 		return nil
 	})
-}
-
-// isDataDirective returns true if the given name represents a data directive name.
-func isDataDirective(name string) bool {
-	switch strings.ToLower(name) {
-	case "d8", "d16", "d32", "d64":
-		return true
-	}
-	return false
 }
 
 // testNumbers finds numeric literals and ensures they can be parsed into

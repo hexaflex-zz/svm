@@ -453,6 +453,10 @@ func (a *assembler) addDebugFile(file string) int {
 
 // encode encodes the given instruction into its final binary form.
 func (a *assembler) encode(instr *parser.List) ([]byte, error) {
+	if size, ok := isReservedDataDirective(instr); ok {
+		return make([]byte, size), nil
+	}
+
 	if size, ok := isDataDirective(instr); ok {
 		return encodeDataDirective(instr, size), nil
 	}
@@ -563,8 +567,12 @@ func writeData(out []byte, v int64, size int) []byte {
 
 // encodedLen returns the byte size occupied by the given node's compiled version.
 func encodedLen(n parser.Node) int {
+	if size, ok := isReservedDataDirective(n); ok {
+		return size
+	}
+
 	if size, ok := isDataDirective(n); ok {
-		return encodedDataDirectiveLen(n.(*parser.List), size)
+		return dataDirectiveLen(n.(*parser.List), size)
 	}
 
 	if n.Type() != parser.Instruction {
@@ -601,8 +609,8 @@ func encodedExprLen(expr *parser.List) int {
 	return 3
 }
 
-// encodedDataDirectiveLen computes the encoded length for the given data directive.
-func encodedDataDirectiveLen(instr *parser.List, bytesize int) int {
+// dataDirectiveLen computes the encoded length for the given data directive.
+func dataDirectiveLen(instr *parser.List, bytesize int) int {
 	var size int
 
 	for i := 1; i < instr.Len(); i++ {
@@ -643,4 +651,27 @@ func isDataDirective(n parser.Node) (int, bool) {
 	}
 
 	return 0, false
+}
+
+// isReservedDataDirective returns true if n represents a 'reserved' directive.
+func isReservedDataDirective(n parser.Node) (int, bool) {
+	if n.Type() != parser.Instruction {
+		return 0, false
+	}
+
+	instr := n.(*parser.List)
+	if !isIdent(instr.At(0), "reserve") {
+		return 0, false
+	}
+
+	expr := instr.At(1).(*parser.List)
+	num := expr.At(0).(*parser.Value)
+	x, _ := parser.ParseNumber(num.Value)
+	return int(x), true
+}
+
+// isIdent returns true if n represents an ident with the given name.
+func isIdent(n parser.Node, name string) bool {
+	return n.Type() == parser.Ident &&
+		strings.EqualFold(n.(*parser.Value).Value, name)
 }

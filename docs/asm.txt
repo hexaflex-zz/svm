@@ -2,7 +2,7 @@
  Assembler & Language
 ===============================================================================
 
- Document rev.: 21
+ Document rev.: 22
 
 
 ===============================================================================
@@ -229,6 +229,8 @@
   d16 args              | Writes raw 16-bit operand values into the program.
   d32 args              | Writes raw 32-bit operand values into the program.
   d64 args              | Writes raw 64-bit operand values into the program.
+  reserve x             | Reserves x number of bytes without assigning any
+                        | values to it.
  -----------------------|-----------------------------------------------------------
   break                 | Inserts a breakpoint at the current address. If run in
                         | debug mode by the VM, this will pause execution and allows

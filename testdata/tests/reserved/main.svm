@@ -1,0 +1,10 @@
+
+:main {
+    mov r0, $foo
+    mov r1, foo
+    halt
+}
+
+reserve 16#ff
+
+:foo d8 123
