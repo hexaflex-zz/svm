@@ -8,7 +8,7 @@ import (
 const (
 	AppVendor  = "hexaflex"
 	AppName    = "svm-asm"
-	AppVersion = "v0.5.0"
+	AppVersion = "v1.0.0"
 )
 
 // Version returns program version information.

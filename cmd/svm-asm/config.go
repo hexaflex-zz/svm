@@ -29,10 +29,10 @@ func parseArgs() *Config {
 	}
 
 	flag.StringVar(&c.ImportRoot, "import", c.ImportRoot, "Root directory for all source code.")
-	flag.StringVar(&c.Output, "out", c.Output, "Location to store data in. Leave empty to write data to stdout.")
-	flag.BoolVar(&c.DebugBuild, "debug", c.DebugBuild, "Include debug symbols in the build.")
-	flag.BoolVar(&c.DumpAST, "dump-ast", c.DumpAST, "Print a human-readable version of the unprocessed AST.")
-	flag.BoolVar(&c.DumpArchive, "dump-ar", c.DumpArchive, "Print a human-readable version of the compiled binary.")
+	flag.StringVar(&c.Output, "out", c.Output, "Output file.")
+	flag.BoolVar(&c.DebugBuild, "debug", c.DebugBuild, "Include debug symbols in the build. Creates an extra <out>.dbg file as output.")
+	flag.BoolVar(&c.DumpAST, "dump-ast", c.DumpAST, "Print a human-readable version of the unprocessed AST to stdout.")
+	flag.BoolVar(&c.DumpArchive, "dump-ar", c.DumpArchive, "Print a human-readable version of the compiled binary to stdout.")
 	version := flag.Bool("version", false, "Display version information.")
 	flag.Parse()
 

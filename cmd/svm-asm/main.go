@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/hexaflex/svm/asm"
+	"github.com/hexaflex/svm/asm/ar"
 )
 
 func main() {
@@ -18,7 +19,8 @@ func main() {
 	case config.DumpArchive:
 		dumpArchive(config)
 	default:
-		buildBinary(config)
+		ar := buildBinary(config)
+		buildDebug(config, ar)
 	}
 }
 
@@ -31,10 +33,7 @@ func dumpArchive(c *Config) {
 		os.Exit(1)
 	}
 
-	w, close := makeWriter(c)
-	defer close()
-
-	fmt.Fprintln(w, ar.String())
+	fmt.Fprintln(os.Stdout, ar.String())
 }
 
 // dumpAST loads the source AST and writes a human readable version of it to the
@@ -46,44 +45,53 @@ func dumpAST(c *Config) {
 		os.Exit(1)
 	}
 
-	w, close := makeWriter(c)
-	defer close()
-
-	fmt.Fprintln(w, ast)
+	fmt.Fprintln(os.Stdout, ast)
 }
 
 // buildBinary builds a binary program and writes it to the requested output location.
-func buildBinary(c *Config) {
+func buildBinary(c *Config) *ar.Archive {
 	ar, err := asm.Build(c.ImportRoot, c.Program, c.DebugBuild)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	w, close := makeWriter(c)
+	w, close := makeWriter(c.Output)
 	defer close()
 
-	err = ar.Save(w)
-	if err != nil {
+	if _, err = w.Write(ar.Instructions); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	return ar
+}
+
+// buildDebug builds a file with debug symbols.
+func buildDebug(c *Config, ar *ar.Archive) {
+	if !c.DebugBuild {
+		return
+	}
+
+	w, close := makeWriter(c.Output + ".dbg")
+	defer close()
+
+	if err := ar.Debug.Save(w); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
 // makeWriter creates an output writer and a cleanup function for it.
-func makeWriter(c *Config) (io.Writer, func()) {
-	if c.Output == "" {
-		return os.Stdout, func() {}
-	}
-
-	dir, _ := filepath.Split(c.Output)
+func makeWriter(file string) (io.Writer, func()) {
+	dir, _ := filepath.Split(file)
 	err := os.MkdirAll(dir, 0744)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	fd, err := os.Create(c.Output)
+	fd, err := os.Create(file)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

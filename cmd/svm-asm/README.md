@@ -1,32 +1,36 @@
 ## svm-asm
 
 This tool reads SVM sourcecode from a given module path and either compiles
-it into a binary archive file, or displays a human-readable dump of either
-the source AST or the compiled archive.
+it into a binary archive, or displays a human-readable dump of either the
+source AST or the compiled archive.
 
 Refer to `docs/asm.txt` for details on the assembly language and the assembler.
    
 
 ## Supported options
 
-    $ svm-asm.exe [options] <target import path>
-    -debug
-            Include debug symbols in the build.
-    -dump-ar
-            Print a human-readable version of the compiled binary.
-    -dump-ast
-            Print a human-readable version of the unprocessed AST.
-    -import string
-            Root directory for all source code.
-    -out string
-            Location to store data in. Leave empty to write data to stdout.
-    -version
-            Display version information.
+        $ svm-asm [options] <target import path>
+        -debug
+                Include debug symbols in the build. Creates an extra <out>.dbg file as output.
+        -dump-ar
+                Print a human-readable version of the compiled binary to stdout.
+        -dump-ast
+                Print a human-readable version of the unprocessed AST to stdout.
+        -import string
+                Root directory for all source code.
+        -out string
+                Output file.
+        -version
+                Display version information.
 
 
 ## Example invocation
 
-    $ svm-asm.exe -import "root" -out "myprogram.bin" myprogram
+Generate a compiled program in the file `myprogram.bin`, by compiling the
+sources from the `myprogram` module. Creates an additional output file
+`myprogram.bin.dbg` with debug symbols.
+
+        $ svm-asm -import "root" -out myprogram.bin -debug myprogram
 
 
 ## Import paths

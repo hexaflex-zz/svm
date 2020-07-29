@@ -1,6 +1,12 @@
 package ar
 
-import "io"
+import (
+	"fmt"
+	"io"
+	"runtime"
+
+	"github.com/pkg/errors"
+)
 
 // DebugFlags defines debug bitflags.
 type DebugFlags byte
@@ -29,7 +35,10 @@ func (d *Debug) Find(addr int) *DebugData {
 	return nil
 }
 
-func (d *Debug) read(r io.Reader) {
+// Load reads debug data from the given stream.
+func (d *Debug) Load(r io.Reader) (err error) {
+	defer recoverOnPanic(&err)
+
 	d.Files = make([]string, readU8(r))
 	for i := range d.Files {
 		d.Files[i] = string(readBytes(r))
@@ -39,9 +48,14 @@ func (d *Debug) read(r io.Reader) {
 	for i := range d.Symbols {
 		d.Symbols[i].read(r)
 	}
+
+	return
 }
 
-func (d *Debug) write(w io.Writer) {
+// Save writes debug data to the given stream.
+func (d *Debug) Save(w io.Writer) (err error) {
+	defer recoverOnPanic(&err)
+
 	writeU8(w, uint8(len(d.Files)))
 	for i := range d.Files {
 		writeBytes(w, []byte(d.Files[i]))
@@ -51,6 +65,8 @@ func (d *Debug) write(w io.Writer) {
 	for i := range d.Symbols {
 		d.Symbols[i].write(w)
 	}
+
+	return
 }
 
 // DebugData defines one set of debug symbols.
@@ -79,4 +95,20 @@ func (d *DebugData) write(w io.Writer) {
 	writeU16(w, uint16(d.Col))
 	writeU32(w, uint32(d.Offset))
 	writeU8(w, uint8(d.Flags))
+}
+
+func recoverOnPanic(err *error) {
+	x := recover()
+	if x == nil {
+		return
+	}
+
+	switch tx := x.(type) {
+	case runtime.Error:
+		panic(tx)
+	case error:
+		*err = errors.Wrapf(tx, "ar")
+	default:
+		*err = fmt.Errorf("ar: %v", tx)
+	}
 }
