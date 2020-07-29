@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -26,7 +27,7 @@ type App struct {
 	display      *sprdi.Device  // Virtual display peripheral.
 	gamepad      *gp14.Device   // Virtual gamepad peripheral.
 	floppy       *fd35.Device   // Virtual floppy drive.
-	debugData    *ar.Debug      // Debug data stored in an archive.
+	debug        ar.Debug       // Debug data stored in an archive.
 	titleUpdated time.Time      // Value used to periodically update window title.
 	lastRendered time.Time      // Last time a frame was rendered.
 }
@@ -209,8 +210,6 @@ func (a *App) initGL() error {
 
 // loadProgram loads the current program from disk and restarts the cpu.
 func (a *App) loadProgram() error {
-	//a.debugData = &ar.Debug
-
 	// Unload existing resources before we load new things.
 	if err := a.cpu.Shutdown(); err != nil {
 		return err
@@ -220,6 +219,9 @@ func (a *App) loadProgram() error {
 		return err
 	}
 
+	// Load debug data if applicable.
+	a.loadDebugData()
+
 	// Load boot sector from external floppy.
 	mem := a.cpu.Memory()
 	mem.SetU16(cpu.R0, fd35.ReadSector)
@@ -227,6 +229,26 @@ func (a *App) loadProgram() error {
 	mem.SetU16(cpu.R2, 0)
 	a.floppy.Int(mem)
 	return nil
+}
+
+func (a *App) loadDebugData() {
+	a.debug.Clear()
+
+	fd, err := os.Open(a.floppy.File() + ".dbg")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return // Is ok.
+		}
+
+		log.Println("failed to load debug data:", err)
+		return
+	}
+
+	defer fd.Close()
+
+	if err = a.debug.Load(fd); err != nil {
+		log.Println("failed to load debug data:", err)
+	}
 }
 
 // debugHandler prints instruction trace data. This can be toggled
@@ -238,8 +260,8 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	var dbg *ar.DebugData
 
 	// Pause execution if we are in debug mode and this instruction has a breakpoint.
-	if a.config.Debug && a.debugData != nil {
-		dbg = a.debugData.Find(i.IP)
+	if a.config.Debug {
+		dbg = a.debug.Find(i.IP)
 		if dbg != nil {
 			if dbg.Flags&ar.Breakpoint != 0 {
 				a.cpu.Stop()
@@ -280,7 +302,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	// Add source context of it is available.
 	if dbg != nil {
 		pad(&sb, 40)
-		file := a.debugData.Files[dbg.File]
+		file := a.debug.Files[dbg.File]
 		fmt.Fprintf(&sb, " %s:%d:%d", file, dbg.Line, dbg.Col)
 	}
 

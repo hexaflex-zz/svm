@@ -24,6 +24,12 @@ type Debug struct {
 	Symbols []DebugData // Per-instruction source context.
 }
 
+// Clear empties all data.
+func (d *Debug) Clear() {
+	d.Files = nil
+	d.Symbols = nil
+}
+
 // Find returns the debug data associated with the given address.
 // Returns nil if there is none.
 func (d *Debug) Find(addr int) *DebugData {

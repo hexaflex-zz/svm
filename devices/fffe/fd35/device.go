@@ -73,6 +73,11 @@ func (d *Device) Id() devices.Id {
 	return devices.NewId(0xfffe, 0x0004)
 }
 
+// File returns the name of the file backing the floppy data.
+func (d *Device) File() string {
+	return d.file
+}
+
 func (d *Device) Startup() error {
 	d.m.Lock()
 
