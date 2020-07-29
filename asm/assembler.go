@@ -3,6 +3,7 @@ package asm
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -51,7 +52,7 @@ func (a *assembler) assemble(ast *parser.AST, module string) (*ar.Archive, error
 		return nil, err
 	}
 
-	if err := a.resolveEntrypoint(module); err != nil {
+	if err := a.resolveEntrypoint(ast.Nodes(), module); err != nil {
 		return nil, err
 	}
 
@@ -63,22 +64,45 @@ func (a *assembler) assemble(ast *parser.AST, module string) (*ar.Archive, error
 		return nil, err
 	}
 
-	if err := a.compile(ast.Nodes()); err != nil {
-		return nil, err
-	}
-
-	return a.ar, nil
+	return a.ar, a.compile(ast.Nodes())
 }
 
-// resolveEntrypoint finds the program entrypoint.
-// There is expected to be one label named "main".
-func (a *assembler) resolveEntrypoint(module string) error {
+// resolveEntrypoint finds the program entrypoint. There is expected to be
+// one label named "main".
+//
+// If the entrypoint is not 0, it creates a new JMP instruction which is
+// located at the very beginning of the program and jumps to the entrypoint.
+func (a *assembler) resolveEntrypoint(nodes *parser.List, module string) error {
 	name := parser.Scope(module).Join("main").String()
-	if addr, ok := a.symbols[name]; ok {
-		a.ar.Entrypoint = addr
-		return nil
+	addr, ok := a.symbols[name]
+	if !ok {
+		return fmt.Errorf("missing entrypoint in program; expected to find %q", name)
 	}
-	return fmt.Errorf("missing entrypoint in program; expected to find %q", name)
+
+	if addr == 0 {
+		return nil // No need to insert anything.
+	}
+
+	// Create and insert the new JMP instruction.
+	var pos parser.Position
+
+	expr := parser.NewList(pos, parser.Expression)
+	expr.Append(parser.NewValue(pos, parser.AddressMode, "$"))
+	expr.Append(parser.NewValue(pos, parser.Number, strconv.Itoa(addr)))
+
+	instr := parser.NewList(pos, parser.Instruction)
+	instr.Append(parser.NewValue(pos, parser.Ident, "jmp"), expr)
+
+	nodes.InsertAt(0, instr)
+
+	// Now that we have inserted an instruction, the existing label
+	// addresses in the symbol table are no longer valid. Fix them.
+	offset := encodedLen(instr)
+	for k := range a.symbols {
+		a.symbols[k] += offset
+	}
+
+	return nil
 }
 
 // evaluateConstants evaluates constant definitions.
