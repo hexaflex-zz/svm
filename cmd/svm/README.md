@@ -1,6 +1,7 @@
 ## svm
 
-SVM is the Virtual machine which runs programs compiled with `svm-asm`.
+SVM is the Virtual machine which runs programs compiled with `svm-asm`
+and packed into a floppy image with `svm-fdd`.
 
 ## Supported options
 
@@ -19,5 +20,5 @@ SVM is the Virtual machine which runs programs compiled with `svm-asm`.
 
 ## Example invocation
 
-    $ svm.exe -debug "myprogram.bin"
+    $ svm -debug myprogram.img
 

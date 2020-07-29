@@ -12,7 +12,7 @@ These image files are suitable for use with the FD35 disk drive.
 
 * Generate an image file `test.fdd` from one or more files:
 
-    `$ svm-fdd -out test.fdd test.a resource1.bin resource2.bin`
+    `$ svm-fdd -out test.fdd program.bin resource1.bin resource2.bin`
 
   Note that in this case, the resulting image file will be truncated to
   1.44MB if the combined size of the inputs exceeds this size. The files
