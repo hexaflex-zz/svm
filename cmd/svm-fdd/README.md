@@ -6,15 +6,24 @@ These image files are suitable for use with the FD35 disk drive.
 
 ### Example
 
-    $ svm-fdd -new test.fdd
+* Generate an image file `test.fdd` with 1.44MB worth of empty space:
 
-Will generate a file `test.fdd` with 1.44Mb worth of empty space.
+    `$ svm-fdd -out test.fdd`
+
+* Generate an image file `test.fdd` from one or more files:
+
+    `$ svm-fdd -out test.fdd test.a resource1.bin resource2.bin`
+
+  Note that in this case, the resulting image file will be truncated to
+  1.44MB if the combined size of the inputs exceeds this size. The files
+  are stored in the order they are specified in the command line.
 
 
 ### Supported options
 
-    $ svm-fdd.exe [options] <image file>
-    -new
-            Create a new, empty image file.
+    $ svm-fdd [options] [<input files>]
+    -out string
+            Output file to generate (Not optional).
     -version
             Display version information.
+

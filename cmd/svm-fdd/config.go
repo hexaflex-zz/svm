@@ -8,8 +8,8 @@ import (
 
 // Config defines program configuration.
 type Config struct {
-	File string // Target image file.
-	New  bool   // Create a new, blank image file.
+	Inputs []string // Optional input files.
+	Output string   // Target image file.
 }
 
 // parseArgs parses command line arguments as applicable.
@@ -20,11 +20,11 @@ func parseArgs() *Config {
 	var c Config
 
 	flag.Usage = func() {
-		fmt.Printf("%s [options] <image file>\n", os.Args[0])
+		fmt.Printf("%s [options] [<input files>]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
-	flag.BoolVar(&c.New, "new", c.New, "Create a new, empty image file.")
+	flag.StringVar(&c.Output, "out", c.Output, "Output file to generate (Not optional).")
 	version := flag.Bool("version", false, "Display version information.")
 	flag.Parse()
 
@@ -33,11 +33,11 @@ func parseArgs() *Config {
 		os.Exit(0)
 	}
 
-	if flag.NArg() == 0 {
+	if len(c.Output) == 0 {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	c.File = flag.Arg(0)
+	c.Inputs = flag.Args()
 	return &c
 }
