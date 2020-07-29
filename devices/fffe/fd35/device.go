@@ -23,10 +23,6 @@ const (
 	SectorTransferTime = (time.Second * BytesPerSector) / BytesPerSecond
 )
 
-func init() {
-	fmt.Println(SectorTransferTime)
-}
-
 // Known interrupt operations.
 const (
 	ReadState = iota
