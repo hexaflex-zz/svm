@@ -1,0 +1,19 @@
+===============================================================================
+ Bootloader
+===============================================================================
+
+ Document rev.: 1
+
+ Loading a program into the VM is expected to be done through a bootable
+ external medium like a floppy disk.
+ 
+ When the system starts up, the CPU initializes all the connected peripherals
+ and then hands control to a small bootloader program that is baked into
+ the CPU.
+
+ This program looks for a connected storage device like a floppy drive.
+ Once found, it ensures there is a bootable medium present in the device.
+ If so, the first kilobyte is copied into system memory and program control
+ jumps to the beginning of this code. What happens next is up to the code
+ being executed.
+
