@@ -12,3 +12,9 @@ Will generate a file `test.fdd` with 1.44Mb worth of empty space.
 
 
 ### Supported options
+
+    $ svm-fdd.exe [options] <image file>
+    -new
+            Create a new, empty image file.
+    -version
+            Display version information.
