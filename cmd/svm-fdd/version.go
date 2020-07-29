@@ -7,7 +7,7 @@ import (
 
 const (
 	AppVendor  = "hexaflex"
-	AppName    = "svm-sprite"
+	AppName    = "svm-fdd"
 	AppVersion = "v0.0.2"
 )
 
