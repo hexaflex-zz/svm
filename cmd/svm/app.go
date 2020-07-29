@@ -38,7 +38,7 @@ func NewApp(config *Config) *App {
 	a.display = sprdi.New()
 	a.gamepad = gp14.New()
 	a.floppy = fd35.New(config.Image, config.Readonly)
-	a.cpu = NewCPUController(a.printTrace, a.display, a.gamepad, a.floppy)
+	a.cpu = NewCPUController(a.debugHandler, a.display, a.gamepad, a.floppy)
 	return &a
 }
 
@@ -211,6 +211,7 @@ func (a *App) initGL() error {
 func (a *App) loadProgram() error {
 	//a.debugData = &ar.Debug
 
+	// Unload existing resources before we load new things.
 	if err := a.cpu.Shutdown(); err != nil {
 		return err
 	}
@@ -228,12 +229,12 @@ func (a *App) loadProgram() error {
 	return nil
 }
 
-// printTrace prints instruction trace data. This can be toggled
+// debugHandler prints instruction trace data. This can be toggled
 // on off through a.config.PrintTrace.
 //
 // It also ensures execution is stopped if the given instruction has a breakpoint
 // associated with it. This only happens if a.config.Debug is true.
-func (a *App) printTrace(i *cpu.Instruction) {
+func (a *App) debugHandler(i *cpu.Instruction) {
 	var dbg *ar.DebugData
 
 	// Pause execution if we are in debug mode and this instruction has a breakpoint.
