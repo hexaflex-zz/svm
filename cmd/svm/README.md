@@ -4,12 +4,10 @@ SVM is the Virtual machine which runs programs compiled with `svm-asm`.
 
 ## Supported options
 
-        $ svm.exe [options] <program>
+        $ svm [options] <image file>
         -debug
                 Run in debug mode.
-        -fdd-img string
-                File containing floppy disk image.
-        -fdd-wp
+        -readonly
                 Is the loaded floppy disk write protected?
         -fullscreen
                 Run the display in fullscreen or windowed mode.

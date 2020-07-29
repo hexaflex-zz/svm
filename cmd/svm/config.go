@@ -8,15 +8,12 @@ import (
 
 // Config defines program configuration.
 type Config struct {
-	Program     string // Path to program binary.
+	Image       string // Path to the image file to load.
 	ScaleFactor int    // Amount by which each pixel is scaled (virtual resolution)
 	Fullscreen  bool   // Run in fullscreen?
-
-	Debug      bool // Enable debug mode? This handles breakpoints if enabled.
-	PrintTrace bool // Print instruction trace data?
-
-	FddImage          string // File containing floppy disk image.
-	FddWriteProtected bool   // Is the loaded floppy disk read-only?
+	Debug       bool   // Enable debug mode? This handles breakpoints if enabled.
+	PrintTrace  bool   // Print instruction trace data?
+	Readonly    bool   // Is the image read-only?
 }
 
 // parseArgs parses command line arguments as applicable.
@@ -31,15 +28,12 @@ func parseArgs() *Config {
 	c.PrintTrace = false
 
 	flag.Usage = func() {
-		fmt.Printf("%s [options] <program>\n", os.Args[0])
+		fmt.Printf("%s [options] <image file>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
-	flag.StringVar(&c.FddImage, "fdd-img", c.FddImage, "File containing floppy disk image.")
-	flag.BoolVar(&c.FddWriteProtected, "fdd-wp", c.FddWriteProtected, "Is the loaded floppy disk write protected?")
-
 	flag.BoolVar(&c.Debug, "debug", c.Debug, "Run in debug mode.")
-
+	flag.BoolVar(&c.Readonly, "readonly", c.Readonly, "Is the loaded image file write protected?")
 	flag.IntVar(&c.ScaleFactor, "scale-factor", c.ScaleFactor, "Pixel scale factor for the display.")
 	flag.BoolVar(&c.Fullscreen, "fullscreen", c.Fullscreen, "Run the display in fullscreen or windowed mode.")
 
@@ -56,7 +50,7 @@ func parseArgs() *Config {
 		os.Exit(1)
 	}
 
-	c.Program = flag.Arg(0)
+	c.Image = flag.Arg(0)
 	c.PrintTrace = c.Debug
 	return &c
 }

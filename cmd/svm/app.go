@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -26,6 +25,7 @@ type App struct {
 	cpu          *CPUController // VM with program to be run.
 	display      *sprdi.Device  // Virtual display peripheral.
 	gamepad      *gp14.Device   // Virtual gamepad peripheral.
+	floppy       *fd35.Device   // Virtual floppy drive.
 	debugData    *ar.Debug      // Debug data stored in an archive.
 	titleUpdated time.Time      // Value used to periodically update window title.
 	lastRendered time.Time      // Last time a frame was rendered.
@@ -37,10 +37,8 @@ func NewApp(config *Config) *App {
 	a.config = config
 	a.display = sprdi.New()
 	a.gamepad = gp14.New()
-	a.cpu = NewCPUController(a.printTrace,
-		a.display,
-		a.gamepad,
-		fd35.New(config.FddImage, config.FddWriteProtected))
+	a.floppy = fd35.New(config.Image, config.Readonly)
+	a.cpu = NewCPUController(a.printTrace, a.display, a.gamepad, a.floppy)
 	return &a
 }
 
@@ -211,27 +209,23 @@ func (a *App) initGL() error {
 
 // loadProgram loads the current program from disk and restarts the cpu.
 func (a *App) loadProgram() error {
-	log.Println("loading", a.config.Program)
+	//a.debugData = &ar.Debug
 
-	fd, err := os.Open(a.config.Program)
-	if err != nil {
+	if err := a.cpu.Shutdown(); err != nil {
 		return err
 	}
 
-	defer fd.Close()
-
-	ar := ar.New()
-	if err = ar.Load(fd); err != nil {
+	if err := a.cpu.Startup(); err != nil {
 		return err
 	}
 
-	a.debugData = &ar.Debug
-
-	if err = a.cpu.Shutdown(); err != nil {
-		return err
-	}
-
-	return a.cpu.Startup(ar.Instructions, ar.Entrypoint)
+	// Load boot sector from external floppy.
+	mem := a.cpu.Memory()
+	mem.SetU16(cpu.R0, fd35.ReadSector)
+	mem.SetU16(cpu.R1, 0)
+	mem.SetU16(cpu.R2, 0)
+	a.floppy.Int(mem)
+	return nil
 }
 
 // printTrace prints instruction trace data. This can be toggled

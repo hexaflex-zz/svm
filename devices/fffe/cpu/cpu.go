@@ -40,8 +40,14 @@ func New(trace TraceFunc) *CPU {
 	}
 }
 
+// Id returns the cpu's device Id.
 func (c *CPU) Id() devices.Id {
 	return devices.NewId(0xfffe, 0x0001)
+}
+
+// Memory returns the cpu's internal memory bank.
+func (c *CPU) Memory() Memory {
+	return c.memory
 }
 
 // Connect connects the given hardware peripheral to the system.
@@ -50,23 +56,22 @@ func (c *CPU) Connect(dev devices.Device) bool {
 	return c.devices.Connect(dev)
 }
 
-// Startup loads the given program and initializes internal resources.
+// Startup initializes the cpu and connected peripherals.
 // Returns an error if a program is already loaded. Use Shutdown() first.
-func (c *CPU) Startup(program []byte, entrypoint int) error {
+func (c *CPU) Startup() error {
 	if !atomic.CompareAndSwapUint32(&c.initialized, 0, 1) {
 		return errors.New(c.Id().String() + " program is already loaded")
 	}
 
-	if len(program) > UserMemoryCapacity {
-		return errors.New(c.Id().String() + " program exceeds memory capacity")
+	log.Println(c.Id(), "startup")
+	for i := range c.memory {
+		c.memory[i] = 0
 	}
 
-	log.Println(c.Id(), "startup")
-	copy(c.memory, program)
-
-	c.memory.SetU16(RIP, entrypoint)
+	c.memory.SetU16(RIP, 0)
 	c.memory.SetU16(RSP, UserMemoryCapacity-2)
 	c.memory.SetU8(RST, 0)
+
 	return c.devices.Startup()
 }
 
@@ -80,7 +85,8 @@ func (c *CPU) Shutdown() error {
 }
 
 // Step performs a single execution step.
-// Returns io.EOF if the program has reached its end.
+// Returns io.EOF if the program has reached its end
+// or no program is loaded.
 func (c *CPU) Step() error {
 	if atomic.LoadUint32(&c.initialized) == 0 {
 		return io.EOF

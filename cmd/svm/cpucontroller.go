@@ -73,9 +73,14 @@ func (c *CPUController) Step() error {
 	return nil
 }
 
+// Memory returns the cpu's internal memory bank.
+func (c *CPUController) Memory() devices.Memory {
+	return c.cpu.Memory()
+}
+
 // Startup loads the given program and initializes the cpu and connected peripherals.
-func (c *CPUController) Startup(program []byte, entrypoint int) error {
-	return c.cpu.Startup(program, entrypoint)
+func (c *CPUController) Startup() error {
+	return c.cpu.Startup()
 }
 
 // Shutdown disposes of CPU and peripheral resources.

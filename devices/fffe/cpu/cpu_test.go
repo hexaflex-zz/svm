@@ -810,13 +810,13 @@ func runTest(t *testing.T, ct *codeTest) {
 	ar.Instructions = ct.program.Bytes()
 
 	vm := New(trace)
-	//vm := New(nil)
-
 	vm.Connect(&testDevice{})
 
-	if err := vm.Startup(ar.Instructions, 0); err != nil {
+	if err := vm.Startup(); err != nil {
 		t.Fatalf("Startup failure: %v", err)
 	}
+
+	copy(vm.memory, ar.Instructions)
 
 	for i := 0; i < UserMemoryCapacity; i++ {
 		if err := vm.Step(); err != nil {
