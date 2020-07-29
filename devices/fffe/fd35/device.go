@@ -14,13 +14,18 @@ import (
 )
 
 const (
-	TrackCount      = 80
-	SectorsPerTrack = 18
-	BytesPerSector  = 1024
-	FloppySize      = TrackCount * SectorsPerTrack * BytesPerSector
-	BytesPerSecond  = 64 // Raw transfer speed.
-	TrackSeekTime   = time.Millisecond * 3
+	TrackCount         = 80
+	SectorsPerTrack    = 18
+	BytesPerSector     = 1024
+	FloppySize         = TrackCount * SectorsPerTrack * BytesPerSector
+	BytesPerSecond     = 256
+	TrackSeekTime      = time.Millisecond * 3
+	SectorTransferTime = (time.Second * BytesPerSector) / BytesPerSecond
 )
+
+func init() {
+	fmt.Println(SectorTransferTime)
+}
 
 // Known interrupt operations.
 const (
@@ -164,6 +169,7 @@ func (d *Device) readSector(mem devices.Memory) {
 		src := sector * BytesPerSector
 		d.seek(sector % SectorsPerTrack)
 		mem.Write(dst, d.data[src:src+BytesPerSector])
+		<-time.After(SectorTransferTime)
 		d.setReady()
 	}()
 }
@@ -185,6 +191,7 @@ func (d *Device) writeSector(mem devices.Memory) {
 		dst := sector * BytesPerSector
 		d.seek(sector % SectorsPerTrack)
 		mem.Read(src, d.data[dst:dst+BytesPerSector])
+		<-time.After(SectorTransferTime)
 		d.setReady()
 	}()
 }
