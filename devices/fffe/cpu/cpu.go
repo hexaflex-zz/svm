@@ -26,7 +26,7 @@ type CPU struct {
 	memory      Memory      // System memory.
 	instr       Instruction // Decoded instruction data.
 	rng         *rand.Rand  // Random number generator.
-	intQueue    []int       // Hardware interrupt queue.
+	intQueue    chan int    // Hardware interrupt queue.
 	initialized uint32      // Is there a valid program loaded?
 }
 
@@ -41,7 +41,7 @@ func New(trace TraceFunc) *CPU {
 		trace:    trace,
 		memory:   make(Memory, MemoryCapacity),
 		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
-		intQueue: make([]int, 0, IntQueueCapacity),
+		intQueue: make(chan int, IntQueueCapacity),
 	}
 }
 
@@ -262,26 +262,29 @@ func (c *CPU) Step() error {
 // checkIntQueue checks if there are pending messages in the interrupt queue.
 // If so, it hands control over to the interrupt handler defined in RIA.
 func (c *CPU) checkIntQueue() {
-	if len(c.intQueue) == 0 {
-		return
+	select {
+	case msg := <-c.intQueue:
+		mem := c.memory[:]
+		ria := mem.U16(RIA)
+
+		c.push(mem.U16(RIP))
+		c.push(mem.U16(R0))
+
+		mem.SetU16(R0, msg)
+		mem.SetU16(RIP, ria)
+	default:
 	}
-
-	mem := c.memory[:]
-	ria := mem.U16(RIA)
-	msg := c.intQueue[0]
-	c.intQueue = c.intQueue[1:]
-
-	c.push(mem.U16(RIP))
-	c.push(mem.U16(R0))
-
-	mem.SetU16(R0, msg)
-	mem.SetU16(RIP, ria)
 }
 
 // queueInterrupt adds a new message to the interrupt queue, provided interrupts are enabled.
 func (c *CPU) queueInterrupt(msg int) {
-	if c.memory.U16(RIA) > 0 && len(c.intQueue) < IntQueueCapacity {
-		c.intQueue = append(c.intQueue, msg)
+	if c.memory.U16(RIA) == 0 {
+		return
+	}
+
+	select {
+	case c.intQueue <- msg:
+	default:
 	}
 }
 
