@@ -41,6 +41,5 @@ import "clock"
     ; can trigger interrupts.
 
     pop r0                                                                     ; Be sure to restore R0 when exiting interrupt handler.
-                                                                               ; CPU doesn't do this for you!
-    ret
+    ret                                                                        ; CPU doesn't do this for you!
 }

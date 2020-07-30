@@ -315,20 +315,23 @@ func testInstructions(nodes *parser.List) error {
 			return NewError(instr.At(0).Position(), "invalid instruction name; expected ident")
 		}
 
-		// Check f the instruction is known. If not, this is not an error. We mau be dealing
+		// Remove empty expression nodes. These can occur in some edge cases like having
+		// a zero-operand instruction with a trailing code comment.
+		for i := 1; i < instr.Len(); i++ {
+			expr := instr.At(i).(*parser.List)
+			if expr.Len() == 0 {
+				instr.Remove(i)
+				i--
+			}
+		}
+
+		// Check f the instruction is known. If not, this is not an error. We may be dealing
 		// with a macro reference of an assembler directive.
 		name := instr.At(0).(*parser.Value)
 		if opcode, ok := arch.Opcode(name.Value); ok {
 			argc := arch.Argc(opcode)
 			if argc != instr.Len()-1 {
 				return NewError(name.Position(), "invalid operand count for instruction %q; expected %d", name.Value, argc)
-			}
-		}
-
-		for i := 1; i < instr.Len(); i++ {
-			expr := instr.At(i).(*parser.List)
-			if expr.Len() == 0 {
-				return NewError(expr.Position(), "unexpected empty expression in instruction operand")
 			}
 		}
 
