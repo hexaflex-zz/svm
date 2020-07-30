@@ -2,7 +2,6 @@
 package clock
 
 import (
-	"log"
 	"time"
 
 	"github.com/hexaflex/svm/devices"
@@ -71,15 +70,12 @@ func (d *Device) Int(mem devices.Memory) {
 
 // poll triggers periodic hardware interrupts if a timer is running.
 func (d *Device) poll() {
-	log.Println(d.Id(), "begin poll")
-
 	timer := time.NewTicker(time.Minute * 1e6)
 	defer timer.Stop()
 
 	for {
 		select {
 		case <-d.endPoll:
-			log.Println(d.Id(), "exit poll")
 			return
 		case interval := <-d.newTimer:
 			timer = time.NewTicker(interval)
