@@ -28,7 +28,7 @@ Refer to `docs/asm.txt` for details on the assembly language and the assembler.
 
 Generate a compiled program in the file `myprogram.bin`, by compiling the
 sources from the `myprogram` module. Creates an additional output file
-`myprogram.bin.dbg` with debug symbols.
+`myprogram.dbg` with debug symbols.
 
         $ svm-asm -import "root" -out myprogram.bin -debug myprogram
 

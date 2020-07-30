@@ -215,6 +215,9 @@ func (a *App) initGL() error {
 
 // loadProgram loads the current program from disk and restarts the cpu.
 func (a *App) loadProgram() error {
+	// Load debug data if applicable.
+	a.loadDebugData()
+
 	// Unload existing resources before we load new things.
 	if err := a.cpu.Shutdown(); err != nil {
 		return err
@@ -223,9 +226,6 @@ func (a *App) loadProgram() error {
 	if err := a.cpu.Startup(); err != nil {
 		return err
 	}
-
-	// Load debug data if applicable.
-	a.loadDebugData()
 
 	// Load boot sector from external floppy.
 	mem := a.cpu.Memory()
@@ -239,13 +239,20 @@ func (a *App) loadProgram() error {
 func (a *App) loadDebugData() {
 	a.debug.Clear()
 
-	fd, err := os.Open(a.config.Image + ".dbg")
-	if err != nil {
-		if os.IsNotExist(err) {
-			return // Is ok.
-		}
+	file := a.config.Image
+	if index := strings.LastIndex(file, "."); index > -1 {
+		file = file[:index]
+	}
 
-		log.Println("failed to load debug data:", err)
+	file += ".dbg"
+
+	fd, err := os.Open(file)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Println("failed to load debug data:", err)
+		} else {
+			log.Println("no debug data loaded")
+		}
 		return
 	}
 

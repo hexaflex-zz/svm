@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hexaflex/svm/asm"
 	"github.com/hexaflex/svm/asm/ar"
@@ -73,7 +74,13 @@ func buildDebug(c *Config, ar *ar.Archive) {
 		return
 	}
 
-	w, close := makeWriter(c.Output + ".dbg")
+	file := c.Output
+	if index := strings.LastIndex(file, "."); index > -1 {
+		file = file[:index]
+	}
+	file += ".dbg"
+
+	w, close := makeWriter(file)
 	defer close()
 
 	if err := ar.Debug.Save(w); err != nil {
