@@ -44,6 +44,8 @@ const (
 
 	HWA
 	INT
+
+	WAIT
 )
 
 // Opcode returns the opcode for the given instruction name.
@@ -122,6 +124,9 @@ func Opcode(name string) (int, bool) {
 		return HWA, true
 	case "INT":
 		return INT, true
+
+	case "WAIT":
+		return WAIT, true
 	}
 
 	return 0, false
@@ -203,6 +208,9 @@ func Name(opcode int) (string, bool) {
 		return "HWA", true
 	case INT:
 		return "INT", true
+
+	case WAIT:
+		return "WAIT", true
 	}
 
 	return "", false
@@ -216,7 +224,7 @@ func Argc(opcode int) int {
 		return 3
 	case MOV, CEQ, CNE, CGT, CGE, CLT, CLE, ABS:
 		return 2
-	case INT, JMP, JEZ, JNZ, CALL, CLEZ, CLNZ, PUSH, POP, SEED:
+	case INT, JMP, JEZ, JNZ, CALL, CLEZ, CLNZ, PUSH, POP, SEED, WAIT:
 		return 1
 	case NOP, HALT, RET:
 		return 0

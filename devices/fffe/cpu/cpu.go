@@ -245,6 +245,9 @@ func (c *CPU) Step() error {
 			return NewError(instr, "invalid device index %d", args[0].Value)
 		}
 
+	case arch.WAIT:
+		<-time.After(time.Millisecond * time.Duration(args[0].Value))
+
 	case arch.NOP:
 		/* nop */
 	case arch.HALT:

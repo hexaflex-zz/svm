@@ -6,11 +6,29 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hexaflex/svm/arch"
 	"github.com/hexaflex/svm/asm/ar"
 	"github.com/hexaflex/svm/devices"
 )
+
+func TestWAIT(t *testing.T) {
+	//   WAIT $500
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.WAIT, op(Constant, 500))
+	ct.emit(arch.HALT)
+
+	start := time.Now()
+	runTest(t, ct)
+	diff := time.Since(start)
+
+	if diff < time.Millisecond*500 {
+		t.Fatalf("expected runtime of >= %v; have %v", time.Millisecond*500, diff)
+	}
+}
 
 func TestMOV(t *testing.T) {
 	//    MOV r0, $123
