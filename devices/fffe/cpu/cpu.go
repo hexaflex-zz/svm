@@ -14,6 +14,9 @@ import (
 	"github.com/hexaflex/svm/devices"
 )
 
+// IntQueueCapacity capacity of the CPU interrupt queue.
+const IntQueueCapacity = 32
+
 // TraceFunc represents a callback handler for debug trace output.
 type TraceFunc func(*Instruction)
 
@@ -23,6 +26,7 @@ type CPU struct {
 	memory      Memory      // System memory.
 	instr       Instruction // Decoded instruction data.
 	rng         *rand.Rand  // Random number generator.
+	intQueue    []int       // Hardware interrupt queue.
 	initialized uint32      // Is there a valid program loaded?
 }
 
@@ -34,9 +38,10 @@ func New(trace TraceFunc) *CPU {
 	}
 
 	return &CPU{
-		trace:  trace,
-		memory: make(Memory, MemoryCapacity),
-		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
+		trace:    trace,
+		memory:   make(Memory, MemoryCapacity),
+		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
+		intQueue: make([]int, 0, IntQueueCapacity),
 	}
 }
 
@@ -72,7 +77,7 @@ func (c *CPU) Startup() error {
 	c.memory.SetU16(RSP, UserMemoryCapacity-2)
 	c.memory.SetU8(RST, 0)
 
-	return c.devices.Startup()
+	return c.devices.Startup(c.queueInterrupt)
 }
 
 // Shutdown cleans up internal resources.
@@ -92,6 +97,8 @@ func (c *CPU) Step() error {
 		return io.EOF
 	}
 
+	c.checkIntQueue()
+
 	mem := c.memory
 	instr := &c.instr
 	args := instr.Args[:]
@@ -108,14 +115,9 @@ func (c *CPU) Step() error {
 		vb := args[1].Value
 		mem.SetI16(va, vb)
 	case arch.PUSH:
-		rsp := mem.U16(RSP)
-		mem.SetU16(RSP, rsp-2)
-		mem.SetU16(rsp, args[0].Value)
+		c.push(args[0].Value)
 	case arch.POP:
-		rsp := mem.U16(RSP)
-		va := mem.I16(rsp + 2)
-		mem.SetU16(RSP, rsp+2)
-		mem.SetU16(args[0].Address, va)
+		mem.SetU16(args[0].Address, c.pop())
 	case arch.RNG:
 		va := args[0].Address
 		vb := int(uint16(args[1].Value))
@@ -255,4 +257,46 @@ func (c *CPU) Step() error {
 	}
 
 	return nil
+}
+
+// checkIntQueue checks if there are pending messages in the interrupt queue.
+// If so, it hands control over to the interrupt handler defined in RIA.
+func (c *CPU) checkIntQueue() {
+	if len(c.intQueue) == 0 {
+		return
+	}
+
+	mem := c.memory[:]
+	ria := mem.U16(RIA)
+	msg := c.intQueue[0]
+	c.intQueue = c.intQueue[1:]
+
+	c.push(mem.U16(RIP))
+	c.push(mem.U16(R0))
+
+	mem.SetU16(R0, msg)
+	mem.SetU16(RIP, ria)
+}
+
+// queueInterrupt adds a new message to the interrupt queue, provided interrupts are enabled.
+func (c *CPU) queueInterrupt(msg int) {
+	if c.memory.U16(RIA) > 0 && len(c.intQueue) < IntQueueCapacity {
+		c.intQueue = append(c.intQueue, msg)
+	}
+}
+
+// push pushes the given value onto the callstack and updates RSP.
+func (c *CPU) push(value int) {
+	mem := c.memory[:]
+	rsp := mem.U16(RSP)
+	mem.SetU16(RSP, rsp-2)
+	mem.SetU16(rsp, value)
+}
+
+// pop returns the top value from the callstack and updates RSP.
+func (c *CPU) pop() int {
+	mem := c.memory[:]
+	rsp := mem.U16(RSP)
+	mem.SetU16(RSP, rsp+2)
+	return mem.I16(rsp + 2)
 }

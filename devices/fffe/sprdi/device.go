@@ -58,7 +58,7 @@ type Device struct {
 	initialized     bool
 }
 
-var _ devices.Device = New()
+var _ devices.Device = &Device{}
 
 func New() *Device {
 	return &Device{}
@@ -86,7 +86,7 @@ func (d *Device) Id() devices.Id {
 	return devices.NewId(0xfffe, 0x0002)
 }
 
-func (d *Device) Startup() error {
+func (d *Device) Startup(devices.IntFunc) error {
 	var err error
 
 	d.shader, err = compileProgram(vertex, "", fragment)

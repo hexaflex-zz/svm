@@ -868,10 +868,10 @@ const testId devices.Id = 0xc0ffee
 
 type testDevice struct{}
 
-func (d *testDevice) Id() devices.Id       { return testId }
-func (d *testDevice) Startup() error       { return nil }
-func (d *testDevice) Shutdown() error      { return nil }
-func (d *testDevice) Int(m devices.Memory) { m.SetI16(R0, 123) }
+func (d *testDevice) Id() devices.Id                { return testId }
+func (d *testDevice) Startup(devices.IntFunc) error { return nil }
+func (d *testDevice) Shutdown() error               { return nil }
+func (d *testDevice) Int(m devices.Memory)          { m.SetI16(R0, 123) }
 
 type codeTest struct {
 	program bytes.Buffer

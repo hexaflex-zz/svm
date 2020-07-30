@@ -23,8 +23,10 @@ func RegisterIndex(name string) int {
 		return 4
 	case "rip":
 		return 5
-	case "rst":
+	case "ria":
 		return 6
+	case "rst":
+		return 7
 	}
 	return -1
 }
@@ -46,6 +48,8 @@ func RegiserName(n int) string {
 	case 5:
 		return "RIP"
 	case 6:
+		return "RIA"
+	case 7:
 		return "RST"
 	}
 	return ""

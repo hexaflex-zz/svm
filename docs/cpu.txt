@@ -4,11 +4,11 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 14
+ Document rev.: 15
 
 
  The CPU clock frequency is unbounded and limited by the host system and
- implementation. It has 65,536 bytes of byte-addressable memory and 7 builtin
+ implementation. It has 65,536 bytes of byte-addressable memory and 8 builtin
  registers. Address values are 16 bits and so are all but one register.
 
     # | Name | Description
@@ -19,7 +19,8 @@
     3 |   R3 | 16 bit general purpose register.
     4 |  RSP | 16 bit stack pointer.
     5 |  RIP | 16 bit instruction pointer.
-    6 |  RST | 8 bit status register with layout: 00000cba
+    6 |  RIA | 16 bit interrupt address register.
+    7 |  RST | 8 bit status register with layout: 00000cba
       |      | 
       |      | a: compare flag; used by comparison instructions. 
       |      | b: overflow flag; set when certain arithmetic 
@@ -135,18 +136,41 @@
 
 
 ================================================================================
- Hardware devices
+ Hardware devices & Interrupts
 ================================================================================
 
  A CPU can connect to- and interact with hardware peripherals. Code can call
  functions on a given device using the INT instruction. Operands for these
  operations are passed through the general purpose registers. Which operands a
  given operation requires, is explained in the documentation for the respective
- device.
+ device. The single argument for the INT instruction is the address where the
+ device is mapped. Where a specific device is mapped can be discovered using the
+ HWA instruction.
 
- The single argument for the INT instruction is the address where the device is
- mapped. Where a specific device is mapped can be discovered using the HWA
+ Alternatively, each device can trigger a hardware interrupt on the CPU if it
+ is configured to do so. For this to work, the program must set the RIA
+ register to a valid non-zero address which forms the entrypoint for a custom
+ interrupt handler. Each device that should be allowed to trigger interrupts,
+ should be given a unique Interrupt Id through a INT operation. Once this
+ id is assigned, the device is free to send an interrupt request to the CPU
+ whenever necessary to fullfill a specific purpose. What this purpose is,
+ depends on the device and is explain in the respective device documentation.
+
+ Each interrupt request is added to a queue by the CPU. The queue has a maximum
+ capacity of 32. Any interrupt requests sent when the queue is full, will be
+ silently ignored. Each execution step, the CPU will check the queue for any
+ pending messages and if found, will hand program control to the interrupt
+ handler defined in RIA. Once this handler is finished, control returns to
+ where it left off.
+ 
+ Note: the CPU treats a hardware interrupt as a CALL instruction to the handler
+ defined in RIA. One should therefore ensure the handler ends with a RET
  instruction.
+
+ Note: When the handler is executed, the CPU creates a callstack backup of R0
+ register and then sets the register to the Interrupt Id provided by the
+ hardware making the request. Once the handler returns, the R0 register should
+ manually be restored using a POP instruction. 
 
 
 ================================================================================

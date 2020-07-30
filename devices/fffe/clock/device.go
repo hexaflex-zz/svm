@@ -28,7 +28,7 @@ func (d *Device) Id() devices.Id {
 	return devices.NewId(0xfffe, 0x0005)
 }
 
-func (d *Device) Startup() error {
+func (d *Device) Startup(devices.IntFunc) error {
 	d.start = time.Now()
 	return nil
 }

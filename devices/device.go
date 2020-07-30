@@ -6,6 +6,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// IntFunc represents a Hardware Interrupt handler.
+type IntFunc func(int)
+
 // Device represents a peripheral device.
 // It can interact with a program through interrupts.
 type Device interface {
@@ -13,7 +16,10 @@ type Device interface {
 	Id() Id
 
 	// Startup initializes internal resources.
-	Startup() error
+	//
+	// IntFuncrepresents an interrupt handler the device can
+	// use to send interrupt requests to the CPU.
+	Startup(IntFunc) error
 
 	// Shutdown cleans up internal resources.
 	Shutdown() error
@@ -49,12 +55,12 @@ func (dm Map) Int(index int, m Memory) bool {
 }
 
 // Startup initializes internal resources.
-func (dm Map) Startup() error {
+func (dm Map) Startup(f IntFunc) error {
 	var errorset ErrorSet
 
 	for _, dev := range dm {
 		log.Println(dev.Id(), "startup")
-		if err := dev.Startup(); err != nil {
+		if err := dev.Startup(f); err != nil {
 			errorset.Append(errors.Wrapf(err, "%s", dev.Id()))
 		}
 	}

@@ -73,7 +73,7 @@ func (d *Device) Id() devices.Id {
 	return devices.NewId(0xfffe, 0x0004)
 }
 
-func (d *Device) Startup() error {
+func (d *Device) Startup(devices.IntFunc) error {
 	d.m.Lock()
 
 	d.state = StateNoMedia
