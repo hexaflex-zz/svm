@@ -40,6 +40,8 @@ language, the architecture and how to interact with peripherals.
 
 ### TODO
 
+* Allow devices to trigger interrupts on the CPU.
+  * Implement interrupt queue in CPU.
 * Add audio support.
   * Create a specification for a audio hardware.
   * Create a device implementation of the specification.
