@@ -1,0 +1,23 @@
+
+import "clock"
+
+:main {
+    hwa clockIndex, $16#fffe, $16#0005                                         ; Find the clock device index.
+    jez $exit
+
+    mov r0, $clock.Uptime                                                      ; Get the current uptime.
+    mov r1, $time1
+    int clockIndex
+
+    wait $1000                                                                 ; Pause for 1 second.
+
+    mov r1, $time2                                                             ; Get the current uptime again.
+    int clockIndex
+
+:exit
+    halt
+
+:clockIndex d16 0
+:time1      d32 0
+:time2      d32 0
+}

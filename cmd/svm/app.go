@@ -13,6 +13,7 @@ import (
 
 	"github.com/hexaflex/svm/arch"
 	"github.com/hexaflex/svm/asm/ar"
+	"github.com/hexaflex/svm/devices/fffe/clock"
 	"github.com/hexaflex/svm/devices/fffe/cpu"
 	"github.com/hexaflex/svm/devices/fffe/fd35"
 	"github.com/hexaflex/svm/devices/fffe/gp14"
@@ -39,7 +40,11 @@ func NewApp(config *Config) *App {
 	a.display = sprdi.New()
 	a.gamepad = gp14.New()
 	a.floppy = fd35.New(config.Image, config.Readonly)
-	a.cpu = NewCPUController(a.debugHandler, a.display, a.gamepad, a.floppy)
+	a.cpu = NewCPUController(a.debugHandler,
+		a.display,
+		a.gamepad,
+		a.floppy,
+		clock.New())
 	return &a
 }
 

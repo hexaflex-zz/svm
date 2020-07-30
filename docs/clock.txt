@@ -1,0 +1,26 @@
+===============================================================================
+ Clock
+===============================================================================
+
+ Manufacturer:  0xFFFE
+ Serialno.:     0x0005
+ Document rev.: 1
+
+ This device implements simple clock and timer facilities.
+
+
+===============================================================================
+ Interrupts
+===============================================================================
+
+ The device is controlled through interrupts. Arguments for these operations
+ are provided through registers R0, R1 and R2.
+
+    0x00 Uptime
+
+        Yields the time in milliseconds, since the system was started.
+
+        Inputs:
+         R1: Address where to store the 32-bit millisecond count.
+
+    
