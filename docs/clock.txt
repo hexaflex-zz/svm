@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0005
- Document rev.: 1
+ Document rev.: 2
 
  This device implements simple clock and timer facilities.
 
@@ -16,11 +16,30 @@
  The device is controlled through interrupts. Arguments for these operations
  are provided through registers R0, R1 and R2.
 
-    0x00 Uptime
+    0x00 SetIntId
+
+        Sets the device' unique interrupt Id. Once set, this allows the clock to
+        trigger hardware interrupts on the CPU when a new timer has been created.
+
+        Inputs:
+         R1: Unique interrupt Id.
+
+    0x01 Uptime
 
         Yields the time in milliseconds, since the system was started.
 
         Inputs:
          R1: Address where to store the 32-bit millisecond count.
 
-    
+    0x02 SetTimer
+
+        Starts a new timer which periodically ticks. Ensure that the CPU
+        has a valid interrupt handler defined and the clock has a valid
+        interrupt id defined through SetIntId before using this.
+
+        On every timer tick, the clock will issue a hardware interrupt
+        request to the CPU.
+
+        Inputs:
+         R1: Timer interval in milliseconds.
+

@@ -3,7 +3,6 @@ package asm
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -88,7 +87,7 @@ func (a *assembler) resolveEntrypoint(nodes *parser.List, module string) error {
 
 	expr := parser.NewList(pos, parser.Expression)
 	expr.Append(parser.NewValue(pos, parser.AddressMode, "$"))
-	expr.Append(parser.NewValue(pos, parser.Number, strconv.Itoa(addr)))
+	expr.Append(parser.NewValue(pos, parser.Ident, name))
 
 	instr := parser.NewList(pos, parser.Instruction)
 	instr.Append(parser.NewValue(pos, parser.Ident, "jmp"), expr)

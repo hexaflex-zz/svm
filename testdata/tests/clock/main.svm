@@ -1,23 +1,46 @@
+;
+; svm-asm -import testdata -out testdata/test.a -debug tests/clock
+; svm-fdd -out testdata/test.img testdata/test.a
+; svm -debug testdata/test.img
+; 
 
 import "clock"
 
+:clockIndex
+    d16 0
+
 :main {
+    mov ria, $intHandler                                                       ; Define a new hardware interrupt handler.
+
     hwa clockIndex, $16#fffe, $16#0005                                         ; Find the clock device index.
     jez $exit
 
-    mov r0, $clock.Uptime                                                      ; Get the current uptime.
-    mov r1, $time1
+    mov r0, $clock.SetIntId                                                    ; Give clock a new, non-zero id.
+    add r1, clockIndex, $1
     int clockIndex
 
-    wait $1000                                                                 ; Pause for 1 second.
-
-    mov r1, $time2                                                             ; Get the current uptime again.
+    mov r0, $clock.SetTimer                                                    ; Start a new 1-second timer.
+    mov r1, $1000
     int clockIndex
+
+:loop
+    wait $500
+    jmp $loop
 
 :exit
     halt
+}
 
-:clockIndex d16 0
-:time1      d32 0
-:time2      d32 0
+; Hardware interrupt handler.
+:intHandler {
+    ;
+    ; Your interrupt handler code goes here.
+    ;
+    ; R0 contains the unique ID assigned to the clock device.
+    ; Allows us to choose what code to run if multiple devices
+    ; can trigger interrupts.
+
+    pop r0                                                                     ; Be sure to restore R0 when exiting interrupt handler.
+                                                                               ; CPU doesn't do this for you!
+    ret
 }
