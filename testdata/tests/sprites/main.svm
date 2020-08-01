@@ -1,5 +1,12 @@
+;
+; svm-asm -import testdata -out testdata/test.a -debug tests/sprites
+; svm-fdd -out testdata/test.img testdata/test.a
+; svm -debug testdata/test.img
+;
+
 import "sprdi"
 import "gp14"
+import "fd35"
 import "tests/sprites/font"
 
 ;------------------------------------------------------------------------------
@@ -12,14 +19,14 @@ import "tests/sprites/font"
     mov r1, $str_helloWorld
     mov r2, $(14 * 32 + 10)                                                    ; Center line on display.
     mov r3, $len_helloWorld
-    int displayIndex
+    int display
 
 :loop
-    gp14.JmpOnJustPressed gamepadIndex, $gp14.ButtonBack, $exit                ; Exit the program if ButtonBack is pressed.
-    gp14.CallOnJustPressed gamepadIndex, $gp14.ButtonA, $recolor               ; Set text color to something random iff ButtonA was pressed.
+    gp14.JmpOnJustPressed gamepad, $gp14.ButtonBack, $exit                     ; Exit the program if ButtonBack is pressed.
+    gp14.CallOnJustPressed gamepad, $gp14.ButtonA, $recolor                    ; Set text color to something random iff ButtonA was pressed.
 
     mov r0, $sprdi.Swap                                                        ; Present backbuffer.
-    int displayIndex
+    int display
     jmp $loop
 
 :exit
@@ -34,7 +41,7 @@ import "tests/sprites/font"
     rng palette+30, $0, $16#ffff                                               ; Set the last palette color to something random.
     mov r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
     mov r1, $palette
-    int displayIndex
+    int display
     ret
 }
 
@@ -42,23 +49,42 @@ import "tests/sprites/font"
 ; setup initializes various devices properties.
 ;------------------------------------------------------------------------------
 :setup {
-    seed $0                                                                    ; Set RNG seed to something predictable.
-
-    hwa displayIndex, $16#fffe, $16#0002                                       ; Find the device index for the SPRDI display.
+    hwa floppy, $16#fffe, $16#0004                                             ; Find the device index for the floppy disk drive.
     jez $notFound
 
-    hwa gamepadIndex, $16#fffe, $16#0003                                       ; Find the device index for the GP14 gamepad.
+    mov r0, $fd35.ReadSector                                                   ; Load 3 extra sectors into memory. We are currently lacking some font sprites.
+    mov r1, $(1 * fd35.SectorByteSize)
+    mov r2, $1
+    int floppy
+    wait $1000
+
+    mov r1, $(2 * fd35.SectorByteSize)
+    mov r2, $2
+    int floppy
+    wait $1000
+
+    mov r1, $(3 * fd35.SectorByteSize)
+    mov r2, $3
+    int floppy
+    wait $1000
+
+    hwa display, $16#fffe, $16#0002                                            ; Find the device index for the SPRDI display.
+    jez $notFound
+
+    hwa gamepad, $16#fffe, $16#0003                                            ; Find the device index for the GP14 gamepad.
     jez $notFound
 
     mov r0, $sprdi.SetBackgroundPalette                                        ; Load custom background color palette.
     mov r1, $palette
-    int displayIndex
+    int display
 
     mov r0, $sprdi.SetBackgroundSprites                                        ; Load our font.
     mov r1, $font.Sprites                                                      ;
     mov r2, $font.ASCIIOffset                                                  ; Text sprites are loaded into the background for this example, so we don't
     mov r3, $font.SpriteCount                                                  ; have to handle per-sprite positioning. They are aligned to a 2D grid.
-    int displayIndex
+    int display
+    
+    seed $0                                                                    ; Set RNG seed to something predictable.
     ret
 
 :notFound
@@ -69,8 +95,9 @@ import "tests/sprites/font"
 ;------------------------------------------------------------------------------
 ; Variables & embedded data
 ;------------------------------------------------------------------------------
-:displayIndex d16 0
-:gamepadIndex d16 0
+:display d16 0
+:gamepad d16 0
+:floppy  d16 0
 
 
 const len_helloWorld = 13

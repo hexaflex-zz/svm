@@ -2,10 +2,11 @@
 package sprdi
 
 import (
+	"fmt"
 	"log"
 	"unsafe"
 
-	"github.com/go-gl/gl/v4.6-core/gl"
+	"github.com/go-gl/gl/v4.2-core/gl"
 	"github.com/pkg/errors"
 
 	"github.com/hexaflex/svm/devices"
@@ -26,12 +27,13 @@ const (
 )
 
 const (
-	DisplayWidth    = 256 // Display width in pixels.
-	DisplayHeight   = 240 // Display height in pixels.
-	PaletteSize     = 16  // PaletteSize defines the number of colors in a color palette.
-	BufferSize      = 256 // BufferSize defines the number of sprites stored in each internal sprite buffer.
-	SpritePixelSize = 8   // SpritePixelSize defines the width and height in pixels, for a single sprite.
-	SpriteByteSize  = 32  // SpriteByteSize defines the size of a sprite in bytes.
+	DisplayWidth           = 256                // Display width in pixels.
+	DisplayHeight          = 240                // Display height in pixels.
+	PaletteSize            = 16                 // PaletteSize defines the number of colors in a color palette.
+	BufferSize             = 256                // BufferSize defines the number of sprites stored in each internal sprite buffer.
+	SpritePixelSize        = 8                  // SpritePixelSize defines the width and height in pixels, for a single sprite.
+	SpriteByteSize         = 32                 // SpriteByteSize defines the size of a sprite in bytes in CPU memory: 4bpp.
+	internalSpriteByteSize = SpriteByteSize * 2 // Size of sprite data in internal device memory: 8bpp.
 )
 
 // The number of tiles in each background dimension.
@@ -214,7 +216,7 @@ func (d *Device) drawForeground(mem devices.Memory) {
 
 // drawSprite draws sprite n to the specified buffer at the given address.
 func (d *Device) drawSprite(dst []byte, dstAddr, n int, isBackground bool) {
-	src := d.sprites[n*SpritePixelSize*SpritePixelSize:]
+	src := d.sprites[n*internalSpriteByteSize:]
 
 	if isBackground {
 		// 'fast' lane for background sprites.
@@ -253,31 +255,46 @@ func (d *Device) clearForeground() {
 }
 
 func (d *Device) setBackgroundSprites(mem devices.Memory) {
-	addr := mem.U16(cpu.R1)
+	address := mem.U16(cpu.R1)
 	index := mem.U16(cpu.R2)
 	count := mem.U16(cpu.R3)
-	sprites := d.sprites[index*SpritePixelSize*SpritePixelSize:]
-
-	for i := 0; i < count*SpriteByteSize; i++ {
-		b := mem.U8(addr + i)
-		sprites[0] = byte(b >> 4)
-		sprites[1] = byte(b & 0xf)
-		sprites = sprites[2:]
-	}
+	d.setSprites(mem, address, index, count)
 }
 
 func (d *Device) setForegroundSprites(mem devices.Memory) {
-	addr := mem.U16(cpu.R1)
+	address := mem.U16(cpu.R1)
 	index := BufferSize + mem.U16(cpu.R2)
 	count := mem.U16(cpu.R3)
-	sprites := d.sprites[index*SpritePixelSize*SpritePixelSize:]
+	d.setSprites(mem, address, index, count)
+}
 
-	for i := 0; i < count*SpriteByteSize; i++ {
-		b := mem.U8(addr + i)
-		sprites[0] = byte(b >> 4)
-		sprites[1] = byte(b & 0xf)
-		sprites = sprites[2:]
+func (d *Device) setSprites(src devices.Memory, address, index, count int) {
+	dsti := index * internalSpriteByteSize
+	dst := d.sprites[:]
+
+	for srci := address; srci < address+count*SpriteByteSize; srci++ {
+		bb := src.U8(srci)
+		dst[dsti+0] = byte(bb >> 4)
+		dst[dsti+1] = byte(bb & 0xf)
+		dsti += 2
 	}
+}
+
+func dumpSprite4bpp(mem devices.Memory, address int) {
+	const Stride = SpritePixelSize >> 1
+	var row [Stride]byte
+	for y := 0; y < SpritePixelSize; y++ {
+		mem.Read(address+y*Stride, row[:])
+		fmt.Printf("%02x\n", row[:])
+	}
+	fmt.Println()
+}
+
+func dumpSprite8bpp(p []byte) {
+	for y := 0; y < SpritePixelSize; y++ {
+		fmt.Printf("%02x\n", p[y*SpritePixelSize:y*SpritePixelSize+SpritePixelSize])
+	}
+	fmt.Println()
 }
 
 func (d *Device) setBackgroundPalette(mem devices.Memory) {

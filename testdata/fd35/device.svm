@@ -26,3 +26,11 @@ const ErrorProtected   = 3
 const ErrorEject       = 4
 const ErrorBadSector   = 5
 const ErrorBroken      = 6
+
+;------------------------------------------------------------------------------
+; Miscellaneous constants
+;------------------------------------------------------------------------------
+const TrackCount      = 80
+const SectorsPerTrack = 18
+const SectorCount     = TrackCount * SectorsPerTrack
+const SectorByteSize  = 1024
