@@ -159,22 +159,6 @@ func parseValue(n parser.Node) (interface{}, error) {
 	}
 }
 
-// splitNumber splits the base prefix from the number part in the given value.
-// Returns base 10 if there is no prefix.
-func splitNumber(v string) (string, int) {
-	index := strings.Index(v, "#")
-	if index == -1 {
-		return v, 10
-	}
-
-	base, err := strconv.ParseInt(v[:index], 10, 8)
-	if err != nil {
-		base = 10
-	}
-
-	return v[index+1:], int(base)
-}
-
 // hasValue returns true if the given node represents the given value
 func hasValue(n parser.Node, v string) bool {
 	tn, ok := n.(*parser.Value)
