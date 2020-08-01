@@ -1,0 +1,36 @@
+;
+; The sys module performs some bootstrapping boilerplate so you don't have to.
+; It does the following:
+;
+; * Loads all peripheral ids into globally accessible variables.
+;   Ready for use in INT instructions.
+;
+
+import "sprdi"
+import "gp14"
+import "fd35"
+import "clock"
+
+:Floppy  d16 0
+:Display d16 0
+:Gamepad d16 0
+:Clock   d16 0
+
+; Bootstrap performs some boilerplate initialization.
+:Bootstrap {
+    hwa Floppy, $gp14.Manufacturer, $gp14.Serial                               ; Find the device index for the floppy disk drive.
+    jez $notFound
+
+    hwa Display, $sprdi.Manufacturer, $sprdi.Serial                            ; Find the device index for the display.
+    jez $notFound
+
+    hwa Gamepad, $fd35.Manufacturer, $fd35.Serial                              ; Find the device index for the gamepad.
+    jez $notFound
+
+    hwa Clock, $clock.Manufacturer, $clock.Serial                              ; Find the device index for the clock.
+    jez $notFound
+    ret
+
+:notFound
+    halt
+}

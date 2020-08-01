@@ -1,3 +1,5 @@
+const Manufacturer = 16#fffe
+const Serial       = 16#0005
 
 ;------------------------------------------------------------------------------
 ; Interrupt operation Ids

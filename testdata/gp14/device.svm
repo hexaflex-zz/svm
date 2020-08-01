@@ -1,3 +1,6 @@
+const Manufacturer = 16#fffe
+const Serial       = 16#0003
+
 ; Interrupt codes
 const IsPressed        = 0
 const IsJustPressed    = 1

@@ -1,4 +1,7 @@
+const Manufacturer = 16#fffe
+const Serial       = 16#0002
 
+; Interrupt ids.
 const PaletteSize          = 16
 const SpriteBufferSize     = 256
 const SpriteSize           = 32
