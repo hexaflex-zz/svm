@@ -27,11 +27,13 @@ language, the architecture and how to interact with peripherals.
 * __cmd__: Contains executables. These are mainly front-ends for packages and some useful tools.
   * __cmd/svm__: Contains the executable VM. This is the one thay actually runs your programs.
   * __cmd/svm-asm__: Contains the executable front-end for the assembler.
-  * __cmd/svm-fdd__: A small program which creates and examines 1.44MB floppy disk images.
+  * __cmd/svm-fdd__: A small program which creates 1.44MB floppy disk images.
   * __cmd/svm-sprite__: A small tool which generates SVM source code from sprite sheets.
 * __devices__: The root directory for implementations of all the virtual hardware components.
   As well as defining some common shared interface types.
+  * __devices/fffe/clock__: Implements a simple clock and timer device.
   * __devices/fffe/cpu__: Implements the CPU that runs the code.
+  * __devices/fffe/fd35__: Implements a virtual 1.44MB floppy disk drive.
   * __devices/fffe/gp14__: Implements a virtual gamepad. It exposes a real gamepad to VM code.
   * __devices/fffe/sprdi__: Implements a virtual display. It allows a program to render sprites.
 * __docs__: Contains text files with documentation for various components.
@@ -40,8 +42,6 @@ language, the architecture and how to interact with peripherals.
 
 ### TODO
 
-* Allow devices to trigger interrupts on the CPU.
-  * Implement interrupt queue in CPU.
 * Add audio support.
   * Create a specification for a audio hardware.
   * Create a device implementation of the specification.
