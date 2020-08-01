@@ -18,7 +18,7 @@ func ParseNumber(value string) (int64, error) {
 func SplitNumber(v string) (int, string) {
 	index := strings.Index(v, "#")
 	if index == -1 {
-		return 10, v
+		return 10, strings.ReplaceAll(v, "_", "")
 	}
 
 	base, err := strconv.ParseInt(v[:index], 10, 8)
