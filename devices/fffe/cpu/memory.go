@@ -113,7 +113,7 @@ func (m Memory) next8() (int, error) {
 	return int(m[rip]), nil
 }
 
-// nnext16ext reads the next 16 bit value at the current instruction pointer value and increments
+// next16 reads the next 16 bit value at the current instruction pointer value and increments
 // said instruction pointer.
 func (m Memory) next16() (int, error) {
 	rip := m.U16(RIP)
