@@ -22,13 +22,15 @@ type astCache struct {
 // BuildAST builds the full AST for the given module and its dependencies.
 func BuildAST(importpath, module string) (*parser.AST, error) {
 	var cache []astCache
-	err := buildAST(&cache, importpath, module, nil)
-	if err != nil {
+
+	if err := buildAST(&cache, importpath, module, nil); err != nil {
 		return nil, err
 	}
 
 	// Merge all parsed modules into a single AST.
+	const Sep = string(os.PathSeparator)
 	ast := parser.NewAST()
+
 	for _, v := range cache {
 		nodes := v.ast.Nodes()
 		pos := nodes.Position()
@@ -37,7 +39,8 @@ func BuildAST(importpath, module string) (*parser.AST, error) {
 			pos = nodes.At(0).Position()
 		}
 
-		components := splitModule(v.module)
+		module := filepath.Clean(strings.Replace(v.module, "/", Sep, -1))
+		components := strings.Split(module, Sep)
 		scopeEnd := parser.NewValue(pos, parser.ScopeEnd, "")
 
 		for i := len(components) - 1; i >= 0; i-- {
@@ -52,14 +55,6 @@ func BuildAST(importpath, module string) (*parser.AST, error) {
 	return ast, nil
 }
 
-// splitModule turns the given module name into a sequence of scope names.
-func splitModule(module string) []string {
-	sep := string(os.PathSeparator)
-	module = strings.Replace(module, "/", sep, -1)
-	module = filepath.Clean(module)
-	return strings.Split(module, sep)
-}
-
 // Build builds a binary program from the given module and its dependencies.
 // It optionally emits debug symbols. The module and its dependencies are expected
 // to have their sources located in the given import root directory.
@@ -71,26 +66,6 @@ func Build(importpath, module string, debug bool) (*ar.Archive, error) {
 
 	asm := newAssembler(debug)
 	return asm.assemble(ast, module)
-}
-
-// containsString returns true if set contains v.
-func containsString(set []string, v string) bool {
-	for _, sv := range set {
-		if sv == v {
-			return true
-		}
-	}
-	return false
-}
-
-// containsCache returns true if set contains an entry with the given module name.
-func containsCache(set []astCache, v string) bool {
-	for _, cv := range set {
-		if cv.module == v {
-			return true
-		}
-	}
-	return false
 }
 
 // buildAST constructs an AST from all the module's sources and its dependencies.
@@ -166,6 +141,26 @@ func testAndBuildImports(cache *[]astCache, ast *parser.AST, importpath string, 
 
 		return nil
 	})
+}
+
+// containsString returns true if set contains v.
+func containsString(set []string, v string) bool {
+	for _, sv := range set {
+		if sv == v {
+			return true
+		}
+	}
+	return false
+}
+
+// containsCache returns true if set contains an entry with the given module name.
+func containsCache(set []astCache, v string) bool {
+	for _, cv := range set {
+		if cv.module == v {
+			return true
+		}
+	}
+	return false
 }
 
 // collateSources returns a list of all the source files associated with
