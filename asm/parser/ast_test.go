@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const File = "../../testdata/tests/sprites/main.svm"
+const File = "../../testdata/examples/sprites/main.svm"
 
 func TestAST(t *testing.T) {
 	ast := NewAST()
