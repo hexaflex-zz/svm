@@ -36,3 +36,22 @@ const TrackCount      = 80
 const SectorsPerTrack = 18
 const SectorCount     = TrackCount * SectorsPerTrack
 const SectorByteSize  = 1024
+
+
+; SyncReadSector reads data from the given sector to the specified address and waits for completion.
+macro SyncReadSector device, address, sector
+    mov r0, $fd35.ReadSector
+    mov r1, address
+    mov r2, sector
+    int device
+    wait $1000
+endmacro
+
+; SyncWriteSector writes data from the specified address to the given sector and waits for completion.
+macro SyncWriteSector device, sector, address
+    mov r0, $fd35.WriteSector
+    mov r1, sector
+    mov r2, address
+    int device
+    wait $1000
+endmacro
