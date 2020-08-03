@@ -14,25 +14,32 @@ import (
 	"github.com/pkg/errors"
 )
 
+type astCache struct {
+	module string
+	ast    *parser.AST
+}
+
 // BuildAST builds the full AST for the given module and its dependencies.
 func BuildAST(importpath, module string) (*parser.AST, error) {
-	cache := make(map[string]*parser.AST)
-	err := buildAST(cache, importpath, module, nil)
+	var cache []astCache
+	err := buildAST(&cache, importpath, module, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Merge all parsed modules into a single AST.
 	ast := parser.NewAST()
-	for k, v := range cache {
-		nodes := v.Nodes()
+	for _, v := range cache {
+		fmt.Println(v.module)
+		nodes := v.ast.Nodes()
 		pos := nodes.Position()
-		components := splitModule(k)
-		scopeEnd := parser.NewValue(pos, parser.ScopeEnd, "")
 
 		if nodes.Len() > 0 {
 			pos = nodes.At(0).Position()
 		}
+
+		components := splitModule(v.module)
+		scopeEnd := parser.NewValue(pos, parser.ScopeEnd, "")
 
 		for i := len(components) - 1; i >= 0; i-- {
 			name := components[i]
@@ -40,7 +47,7 @@ func BuildAST(importpath, module string) (*parser.AST, error) {
 			nodes.Append(scopeEnd)
 		}
 
-		ast.Merge(v)
+		ast.Merge(v.ast)
 	}
 
 	return ast, nil
@@ -77,12 +84,22 @@ func containsString(set []string, v string) bool {
 	return false
 }
 
+// containsCache returns true if set contains an entry with the given module name.
+func containsCache(set []astCache, v string) bool {
+	for _, cv := range set {
+		if cv.module == v {
+			return true
+		}
+	}
+	return false
+}
+
 // buildAST constructs an AST from all the module's sources and its dependencies.
 // It ensures the module and its dependencies do not contain any circular references.
-func buildAST(cache map[string]*parser.AST, importpath, module string, importChain []string) error {
+func buildAST(cache *[]astCache, importpath, module string, importChain []string) error {
 	module = strings.ToLower(module)
 
-	if _, ok := cache[module]; ok {
+	if containsCache(*cache, module) {
 		return nil // Already parsed.
 	}
 
@@ -107,13 +124,17 @@ func buildAST(cache map[string]*parser.AST, importpath, module string, importCha
 		}
 	}
 
-	cache[module] = ast
+	*cache = append(*cache, astCache{
+		module: module,
+		ast:    ast,
+	})
+
 	return testAndBuildImports(cache, ast, importpath, importChain)
 }
 
 // testAndBuildImports finds all import statenents in the given AST and checks them recursively.
 // If valid, parses them into the AST.
-func testAndBuildImports(cache map[string]*parser.AST, ast *parser.AST, importpath string, importChain []string) error {
+func testAndBuildImports(cache *[]astCache, ast *parser.AST, importpath string, importChain []string) error {
 	return ast.Nodes().Each(func(_ int, n parser.Node) error {
 		if n.Type() != parser.Instruction {
 			return nil
