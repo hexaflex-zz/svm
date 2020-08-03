@@ -30,7 +30,6 @@ func BuildAST(importpath, module string) (*parser.AST, error) {
 	// Merge all parsed modules into a single AST.
 	ast := parser.NewAST()
 	for _, v := range cache {
-		fmt.Println(v.module)
 		nodes := v.ast.Nodes()
 		pos := nodes.Position()
 
