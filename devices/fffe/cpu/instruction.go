@@ -66,7 +66,7 @@ func (op *Operand) Decode(m Memory) error {
 		op.Value = m.I16(op.Address)
 
 	case Register:
-		op.Address = (b&0x1f)*2 + UserMemoryCapacity
+		op.Address = (b&0x3f)*2 + UserMemoryCapacity
 		op.Value = m.I16(op.Address)
 	}
 

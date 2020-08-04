@@ -19,14 +19,22 @@ func RegisterIndex(name string) int {
 		return 2
 	case "r3":
 		return 3
-	case "rsp":
+	case "r4":
 		return 4
-	case "rip":
+	case "r5":
 		return 5
-	case "ria":
+	case "r6":
 		return 6
-	case "rst":
+	case "r7":
 		return 7
+	case "rsp":
+		return 8
+	case "rip":
+		return 9
+	case "ria":
+		return 10
+	case "rst":
+		return 11
 	}
 	return -1
 }
@@ -44,12 +52,20 @@ func RegiserName(n int) string {
 	case 3:
 		return "R3"
 	case 4:
-		return "RSP"
+		return "R4"
 	case 5:
-		return "RIP"
+		return "R5"
 	case 6:
-		return "RIA"
+		return "R6"
 	case 7:
+		return "R7"
+	case 8:
+		return "RSP"
+	case 9:
+		return "RIP"
+	case 10:
+		return "RIA"
+	case 11:
 		return "RST"
 	}
 	return ""

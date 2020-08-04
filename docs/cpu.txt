@@ -4,23 +4,27 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 15
+ Document rev.: 16
 
 
  The CPU clock frequency is unbounded and limited by the host system and
- implementation. It has 65,536 bytes of byte-addressable memory and 8 builtin
+ implementation. It has 65,536 bytes of byte-addressable memory and 12 builtin
  registers. Address values are 16 bits and so are all but one register.
 
     # | Name | Description
  -----|------|---------------------------------------------------------------
-    0 |   R0 | 16 bit general purpose register.
-    1 |   R1 | 16 bit general purpose register.
-    2 |   R2 | 16 bit general purpose register.
-    3 |   R3 | 16 bit general purpose register.
-    4 |  RSP | 16 bit stack pointer.
-    5 |  RIP | 16 bit instruction pointer.
-    6 |  RIA | 16 bit interrupt address register.
-    7 |  RST | 8 bit status register with layout: 00000cba
+   00 |   R0 | 16 bit general purpose register.
+   01 |   R1 | 16 bit general purpose register.
+   02 |   R2 | 16 bit general purpose register.
+   03 |   R3 | 16 bit general purpose register.
+   04 |   R4 | 16 bit general purpose register.
+   05 |   R5 | 16 bit general purpose register.
+   06 |   R6 | 16 bit general purpose register.
+   07 |   R7 | 16 bit general purpose register.
+   08 |  RSP | 16 bit stack pointer.
+   09 |  RIP | 16 bit instruction pointer.
+   0a |  RIA | 16 bit interrupt address register.
+   0b |  RST | 8 bit status register with layout: 00000cba
       |      | 
       |      | a: compare flag; used by comparison instructions. 
       |      | b: overflow flag; set when certain arithmetic 

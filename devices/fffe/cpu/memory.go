@@ -4,7 +4,7 @@ import "io"
 
 const (
 	UserMemoryCapacity = 0x10000                               // Size of user space.
-	RegisterCapacity   = 8 * 2                                 // Space occupied by registers.
+	RegisterCapacity   = 12 * 2                                // Space occupied by registers.
 	MemoryCapacity     = UserMemoryCapacity + RegisterCapacity // Total memory capacity: userspace + registers.
 )
 
@@ -13,7 +13,11 @@ const (
 	R1  = R0 + 2             // Address for general purpose register R1.
 	R2  = R1 + 2             // Address for general purpose register R2.
 	R3  = R2 + 2             // Address for general purpose register R3.
-	RSP = R3 + 2             // Address for stack pointer register.
+	R4  = R3 + 2             // Address for general purpose register R4.
+	R5  = R4 + 2             // Address for general purpose register R5.
+	R6  = R5 + 2             // Address for general purpose register R6.
+	R7  = R6 + 2             // Address for general purpose register R7.
+	RSP = R7 + 2             // Address for stack pointer register.
 	RIP = RSP + 2            // Address for instruction pointer register.
 	RIA = RIP + 2            // Address for Interrupt Address register.
 	RST = RIA + 2            // Address for status register.

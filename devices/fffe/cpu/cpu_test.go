@@ -897,7 +897,7 @@ func (ct *codeTest) emit(opcode int, args ...[2]int) {
 
 		case Register:
 			b := byte(v[0]&0x3) << 6
-			b |= byte(v[1]) & 0x1f
+			b |= byte(v[1]) & 0x3f
 			w.WriteByte(b)
 		}
 	}
