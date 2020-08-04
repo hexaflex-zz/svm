@@ -323,8 +323,16 @@ func (a *assembler) findMacro(name string, scope parser.Scope) *parser.List {
 
 // replaceMacroContents traverses instructions in body and replaces occurrences of idents from names
 // with their counterparts in values.
+//
+// Additionally it reads scope names and assignes unique values to their names.
 func replaceMacroContents(body, values []parser.Node, names []*parser.Value) {
 	for _, n := range body {
+		if n.Type() == parser.ScopeBegin {
+			scope := n.(*parser.Value)
+			scope.Value = syntax.UniqueName()
+			continue
+		}
+
 		if n.Type() != parser.Instruction {
 			continue
 		}

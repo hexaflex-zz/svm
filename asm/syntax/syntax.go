@@ -89,7 +89,7 @@ func fixScopeNames(nodes *parser.List) error {
 		scope := n.(*parser.Value)
 
 		if len(scope.Value) == 0 {
-			scope.Value = uniqueName()
+			scope.Value = UniqueName()
 		}
 
 		return nil
@@ -226,8 +226,8 @@ func translateIf(nodes *parser.List) error {
 	return nil
 }
 
-// uniqueName generates a unique name from an atomically incremented value.
-var uniqueName = func() func() string {
+// UniqueName generates a unique name from an atomically incremented value.
+var UniqueName = func() func() string {
 	var value uint32
 	return func() string {
 		v := atomic.AddUint32(&value, 1)
@@ -237,7 +237,7 @@ var uniqueName = func() func() string {
 
 // createConditionalJump creates a JEZ instruction and a label to jump to.
 func createConditionalJump(pos1, pos2 parser.Position) (*parser.List, *parser.Value) {
-	labelName := uniqueName()
+	labelName := UniqueName()
 
 	expr := parser.NewList(pos1, parser.Expression)
 	expr.Append(parser.NewValue(pos1, parser.AddressMode, "$"))
