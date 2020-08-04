@@ -11,26 +11,21 @@ import "sprdi"
 import "gp14"
 import "clock"
 
-:Floppy  d16 0
-:Display d16 0
-:Gamepad d16 0
-:Clock   d16 0
-
 ; Bootstrap performs some boilerplate initialization.
 ; This is a macro to ensure it is embedded in the boot sector.
 ;
 ; exitHandler is an address this code jumps to if any of the required
 ; devices can not be found.
 macro Bootstrap exitHandler
-    hwa sys.Floppy, $fd35.Manufacturer, $fd35.Serial                           ; Find the device index for the floppy disk drive.
+    hwa fd35.Device, $fd35.Manufacturer, $fd35.Serial                          ; Find the device index for the floppy disk drive.
     jez exitHandler
 
-    hwa sys.Display, $sprdi.Manufacturer, $sprdi.Serial                        ; Find the device index for the display.
+    hwa sprdi.Device, $sprdi.Manufacturer, $sprdi.Serial                       ; Find the device index for the display.
     jez exitHandler
 
-    hwa sys.Gamepad, $gp14.Manufacturer, $gp14.Serial                          ; Find the device index for the gamepad.
+    hwa gp14.Device, $gp14.Manufacturer, $gp14.Serial                          ; Find the device index for the gamepad.
     jez exitHandler
 
-    hwa sys.Clock, $clock.Manufacturer, $clock.Serial                          ; Find the device index for the clock.
+    hwa clock.Device, $clock.Manufacturer, $clock.Serial                       ; Find the device index for the clock.
     jez exitHandler
 endmacro

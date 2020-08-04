@@ -22,18 +22,20 @@ const ButtonRight       = 12
 const ButtonDown        = 13
 const ButtonLeft        = 14
 
+:Device d16 0
+
 ; JmpOnJustPressed jumps to the given address if the specified key was just pressed.
-macro JmpOnJustPressed device, button, address
+macro JmpOnJustPressed button, address
     mov r0, $IsJustPressed
     mov r1, button
-    int device
+    int gp14.Device
     jnz address
 endmacro
 
 ; CallOnJustPressed calls the given subroutine if the specified key was just pressed.
-macro CallOnJustPressed device, button, subroutine
+macro CallOnJustPressed button, subroutine
     mov  r0, $IsJustPressed
     mov  r1, button
-    int  device
+    int  gp14.Device
     clnz subroutine
 endmacro

@@ -17,11 +17,11 @@ import "examples/sprites/font"
     call $setup
 
 :loop
-    gp14.JmpOnJustPressed sys.Gamepad, $gp14.ButtonBack, $exit                 ; Exit the program if ButtonBack is pressed.
-    gp14.CallOnJustPressed sys.Gamepad, $gp14.ButtonA, $recolor                ; Set text color to something random iff ButtonA was pressed.
+    gp14.JmpOnJustPressed $gp14.ButtonBack, $exit                              ; Exit the program if ButtonBack is pressed.
+    gp14.CallOnJustPressed $gp14.ButtonA, $recolor                             ; Set text color to something random iff ButtonA was pressed.
 
     mov r0, $sprdi.Swap                                                        ; Present backbuffer.
-    int sys.Display
+    int sprdi.Device
     jmp $loop
 
 :exit
@@ -36,7 +36,7 @@ import "examples/sprites/font"
     rng palette+30, $0, $16#ffff                                               ; Set the last palette color to something random.
     mov r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
     mov r1, $palette
-    int sys.Display
+    int sprdi.Device
     ret
 }
 
@@ -46,26 +46,26 @@ import "examples/sprites/font"
 :setup {
     sys.Bootstrap $deviceNotFound
 
-    fd35.SyncReadSector sys.Floppy, $(1 * fd35.SectorByteSize), $1             ; Load extra sectors into memory. We are currently lacking some font sprites.
-    fd35.SyncReadSector sys.Floppy, $(2 * fd35.SectorByteSize), $2
-    fd35.SyncReadSector sys.Floppy, $(3 * fd35.SectorByteSize), $3
-    fd35.SyncReadSector sys.Floppy, $(4 * fd35.SectorByteSize), $4
+    fd35.SyncReadSector $(1 * fd35.SectorByteSize), $1                         ; Load extra sectors into memory. We are currently lacking some font sprites.
+    fd35.SyncReadSector $(2 * fd35.SectorByteSize), $2
+    fd35.SyncReadSector $(3 * fd35.SectorByteSize), $3
+    fd35.SyncReadSector $(4 * fd35.SectorByteSize), $4
 
     mov r0, $sprdi.SetBackgroundPalette                                        ; Load custom background color palette.
     mov r1, $palette
-    int sys.Display
+    int sprdi.Device
 
     mov r0, $sprdi.SetBackgroundSprites                                        ; Load our font. Text sprites are loaded into the background for
     mov r1, $font.Sprites                                                      ; this example, so we don't have to handle per-sprite positioning.
     mov r2, $font.ASCIIOffset                                                  ; They are aligned to a 2D grid.
     mov r3, $font.SpriteCount
-    int sys.Display
+    int sprdi.Device
 
     mov r0, $sprdi.DrawBackground                                              ; Display text at center of display.
     mov r1, $str_helloWorld
     mov r2, $(14 * 32 + 10)
     mov r3, $len_helloWorld
-    int sys.Display
+    int sprdi.Device
     ret
 
 :deviceNotFound

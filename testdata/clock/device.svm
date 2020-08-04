@@ -7,3 +7,6 @@ const Serial       = 16#0005
 const SetIntId = 0
 const Uptime   = 1
 const SetTimer = 2
+
+
+:Device d16 0
