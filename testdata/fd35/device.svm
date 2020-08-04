@@ -37,14 +37,13 @@ const SectorsPerTrack = 18
 const SectorCount     = TrackCount * SectorsPerTrack
 const SectorByteSize  = 1024
 
-
 ; SyncReadSector reads data from the given sector to the specified address and waits for completion.
 macro SyncReadSector device, address, sector
     mov r0, $fd35.ReadSector
     mov r1, address
     mov r2, sector
     int device
-    wait $1000
+    fd35.waitReady device
 endmacro
 
 ; SyncWriteSector writes data from the specified address to the given sector and waits for completion.
@@ -53,5 +52,16 @@ macro SyncWriteSector device, sector, address
     mov r1, sector
     mov r2, address
     int device
-    wait $1000
+    fd35.waitReady device
+endmacro
+
+; waitReady does a busy loop while the device state is StateBusy.
+macro waitReady device
+{
+:loop
+    mov r0, $fd35.ReadState
+    int device
+    ceq r0, $fd35.StateBusy
+    jnz $loop
+}
 endmacro

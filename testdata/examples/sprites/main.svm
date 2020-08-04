@@ -44,11 +44,12 @@ import "examples/sprites/font"
 ; setup initializes various devices properties.
 ;------------------------------------------------------------------------------
 :setup {
-    call sys.Bootstrap
+    sys.Bootstrap $deviceNotFound
 
-    fd35.SyncReadSector sys.Floppy, $(1 * fd35.SectorByteSize), $1             ; Load 3 extra sectors into memory. We are currently lacking some font sprites.
+    fd35.SyncReadSector sys.Floppy, $(1 * fd35.SectorByteSize), $1             ; Load extra sectors into memory. We are currently lacking some font sprites.
     fd35.SyncReadSector sys.Floppy, $(2 * fd35.SectorByteSize), $2
     fd35.SyncReadSector sys.Floppy, $(3 * fd35.SectorByteSize), $3
+    fd35.SyncReadSector sys.Floppy, $(4 * fd35.SectorByteSize), $4
 
     mov r0, $sprdi.SetBackgroundPalette                                        ; Load custom background color palette.
     mov r1, $palette
@@ -60,12 +61,15 @@ import "examples/sprites/font"
     mov r3, $font.SpriteCount
     int sys.Display
 
-    mov r0, $sprdi.DrawBackground                                              ; Load text to display.
+    mov r0, $sprdi.DrawBackground                                              ; Display text at center of display.
     mov r1, $str_helloWorld
-    mov r2, $(14 * 32 + 10)                                                    ; Center line on display.
+    mov r2, $(14 * 32 + 10)
     mov r3, $len_helloWorld
     int sys.Display
     ret
+
+:deviceNotFound
+    halt
 }
 
 
