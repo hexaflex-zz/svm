@@ -38,9 +38,8 @@ func (c *CPUController) Running() bool {
 func (c *CPUController) Frequency() float64 {
 	if c.running {
 		return float64(c.cycleCount) / time.Since(c.start).Seconds()
-	} else {
-		return 0
 	}
+	return 0
 }
 
 // ToggleRun starts or stops program execution.
