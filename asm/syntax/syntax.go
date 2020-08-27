@@ -325,8 +325,8 @@ func testInstructions(nodes *parser.List) error {
 			}
 		}
 
-		// Check f the instruction is known. If not, this is not an error. We may be dealing
-		// with a macro reference of an assembler directive.
+		// Check if the instruction is known. If not, this is not an error. We may be dealing
+		// with a macro reference or an assembler directive.
 		name := instr.At(0).(*parser.Value)
 		if opcode, ok := arch.Opcode(name.Value); ok {
 			argc := arch.Argc(opcode)
