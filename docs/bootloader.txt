@@ -2,7 +2,7 @@
  Bootloader
 ===============================================================================
 
- Document rev.: 1
+ Document rev.: 2
 
  Loading a program into the VM is expected to be done through a bootable
  external medium like a floppy disk.
@@ -13,7 +13,7 @@
 
  This program looks for a connected storage device like a floppy drive.
  Once found, it ensures there is a bootable medium present in the device.
- If so, the first kilobyte is copied into system memory and program control
+ If so, the first sector is copied into system memory and program control
  jumps to the beginning of this code. What happens next is up to the code
  being executed.
 
