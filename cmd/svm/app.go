@@ -58,6 +58,8 @@ func (a *App) Run() error {
 	defer a.dispose()
 
 	log.Println(Version())
+	log.Println("OpenGL version:", gl.GoStr(gl.GetString(gl.VERSION)))
+
 	printHelp()
 
 	if err := a.loadProgram(); err != nil {
