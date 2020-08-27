@@ -17,4 +17,4 @@ const ClearBackground      = 6
 const ClearForeground      = 7
 const Swap                 = 8
 
-:Device d16 0
+:Device d16 $0

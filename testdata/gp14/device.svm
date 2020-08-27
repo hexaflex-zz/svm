@@ -22,7 +22,7 @@ const ButtonRight       = 12
 const ButtonDown        = 13
 const ButtonLeft        = 14
 
-:Device d16 0
+:Device d16 $0
 
 ; JmpOnJustPressed jumps to the given address if the specified key was just pressed.
 macro JmpOnJustPressed button, address

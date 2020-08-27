@@ -38,7 +38,7 @@ const SectorCount     = TrackCount * SectorsPerTrack
 const SectorByteSize  = 1024
 
 
-:Device d16 0
+:Device d16 $0
 
 ; SyncReadSector reads data from the given sector to the specified address and waits for completion.
 macro SyncReadSector address, sector

@@ -12,7 +12,7 @@ import "clock"
     hwa clock.Device, $16#fffe, $16#0005                                       ; Find the clock device index.
     jez $exit
 
-    mov r0, $clock.SetIntId                                                    ; Give clock a new, non-zero id.
+    mov r0, $clock.SetIntID                                                    ; Give clock a new, non-zero id.
     add r1, clock.Device, $1
     int clock.Device
 
