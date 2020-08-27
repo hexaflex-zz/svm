@@ -12,8 +12,8 @@ type IntFunc func(int)
 // Device represents a peripheral device.
 // It can interact with a program through interrupts.
 type Device interface {
-	// Id yields the manufacturer and serial number for the device.
-	Id() Id
+	// ID yields the manufacturer and serial number for the device.
+	ID() ID
 
 	// Startup initializes internal resources.
 	//
@@ -36,7 +36,7 @@ type Map []Device
 // Connect adds the given device to the device map.
 // Returns false if the device type is already present in the set.
 func (dm *Map) Connect(dev Device) bool {
-	if (*dm).Find(dev.Id()) > -1 {
+	if (*dm).Find(dev.ID()) > -1 {
 		return false
 	}
 
@@ -59,9 +59,9 @@ func (dm Map) Startup(f IntFunc) error {
 	var errorset ErrorSet
 
 	for _, dev := range dm {
-		log.Println(dev.Id(), "startup")
+		log.Println(dev.ID(), "startup")
 		if err := dev.Startup(f); err != nil {
-			errorset.Append(errors.Wrapf(err, "%s", dev.Id()))
+			errorset.Append(errors.Wrapf(err, "%s", dev.ID()))
 		}
 	}
 
@@ -77,9 +77,9 @@ func (dm Map) Shutdown() error {
 	var errorset ErrorSet
 
 	for _, dev := range dm {
-		log.Println(dev.Id(), "shutdown")
+		log.Println(dev.ID(), "shutdown")
 		if err := dev.Shutdown(); err != nil {
-			errorset.Append(errors.Wrapf(err, "%s", dev.Id()))
+			errorset.Append(errors.Wrapf(err, "%s", dev.ID()))
 		}
 	}
 
@@ -92,9 +92,9 @@ func (dm Map) Shutdown() error {
 
 // Find returns the index for the device with the given id.
 // Returns -1 if it can't be found.
-func (dm Map) Find(id Id) int {
+func (dm Map) Find(id ID) int {
 	for i, dev := range dm {
-		if dev.Id() == id {
+		if dev.ID() == id {
 			return i
 		}
 	}

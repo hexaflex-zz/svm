@@ -13,6 +13,7 @@ import (
 	"github.com/hexaflex/svm/devices/fffe/cpu"
 )
 
+// These values define floppy disk and drive properties.
 const (
 	TrackCount         = 80
 	SectorsPerTrack    = 18
@@ -62,6 +63,7 @@ type Device struct {
 
 var _ devices.Device = &Device{}
 
+// New creates a new device instance.
 func New(file string, readonly bool) *Device {
 	return &Device{
 		file:     file,
@@ -69,10 +71,13 @@ func New(file string, readonly bool) *Device {
 	}
 }
 
-func (d *Device) Id() devices.Id {
-	return devices.NewId(0xfffe, 0x0004)
+// ID returns the device id.
+func (d *Device) ID() devices.ID {
+	return devices.NewID(0xfffe, 0x0004)
 }
 
+// Startup initializes internal device resources.
+// It loads floppy contents from disk.
 func (d *Device) Startup(devices.IntFunc) error {
 	d.m.Lock()
 
@@ -85,7 +90,7 @@ func (d *Device) Startup(devices.IntFunc) error {
 		return nil
 	}
 
-	log.Println(d.Id(), "reading", d.file)
+	log.Println(d.ID(), "reading", d.file)
 	fd, err := os.Open(d.file)
 	if err != nil {
 		d.error = ErrorBroken
@@ -113,6 +118,7 @@ func (d *Device) Startup(devices.IntFunc) error {
 	return nil
 }
 
+// Shutdown cleans up device resources and writes floppy contents to disk.
 func (d *Device) Shutdown() error {
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -121,8 +127,8 @@ func (d *Device) Shutdown() error {
 	d.error = ErrorNone
 	d.track = 0
 
-	if len(d.file) > 0 {
-		log.Println(d.Id(), "writing", d.file)
+	if !d.readonly && len(d.file) > 0 {
+		log.Println(d.ID(), "writing", d.file)
 		if fd, err := os.Create(d.file); err == nil {
 			fd.Write(d.data)
 			fd.Close()

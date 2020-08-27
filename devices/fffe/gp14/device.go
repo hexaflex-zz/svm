@@ -50,6 +50,7 @@ type Device struct {
 
 var _ devices.Device = &Device{}
 
+// New creates a new device.
 func New() *Device {
 	return &Device{}
 }
@@ -79,10 +80,13 @@ func (d *Device) Update() {
 	}
 }
 
-func (d *Device) Id() devices.Id {
-	return devices.NewId(0xfffe, 0x0003)
+// ID returns the device id.
+func (d *Device) ID() devices.ID {
+	return devices.NewID(0xfffe, 0x0003)
 }
 
+// Startup initializes device resources.
+// It detects any connected gamepad.
 func (d *Device) Startup(devices.IntFunc) error {
 	glfw.SetJoystickCallback(d.configure)
 
@@ -97,6 +101,7 @@ func (d *Device) Startup(devices.IntFunc) error {
 	return nil
 }
 
+// Shutdown clears up device resources.
 func (d *Device) Shutdown() error {
 	glfw.SetJoystickCallback(nil)
 	return nil
@@ -125,9 +130,9 @@ func (d *Device) configure(joy glfw.Joystick, event glfw.PeripheralEvent) {
 	d.joy = joy
 
 	if d.initialized {
-		log.Println(d.Id(), "gamepad connected")
+		log.Println(d.ID(), "gamepad connected")
 	} else {
-		log.Println(d.Id(), "gamepad disconnected")
+		log.Println(d.ID(), "gamepad disconnected")
 	}
 
 	for btn, state := range d.state {

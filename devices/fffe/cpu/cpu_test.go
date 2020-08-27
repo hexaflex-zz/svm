@@ -762,7 +762,7 @@ func TestHWA1(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.HWA, op(Register, 0), op(Constant, testId.Manufacturer()), op(Constant, testId.Serial()))
+	ct.emit(arch.HWA, op(Register, 0), op(Constant, testID.Manufacturer()), op(Constant, testID.Serial()))
 	ct.emit(arch.JEZ, op(Constant, 18))
 	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
 	ct.emit(arch.HALT)
@@ -808,7 +808,7 @@ func TestINT(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.HWA, op(Register, 0), op(Constant, testId.Manufacturer()), op(Constant, testId.Serial()))
+	ct.emit(arch.HWA, op(Register, 0), op(Constant, testID.Manufacturer()), op(Constant, testID.Serial()))
 	ct.emit(arch.JEZ, op(Constant, 15))
 	ct.emit(arch.INT, op(Register, 0))
 	ct.emit(arch.HALT)
@@ -864,11 +864,11 @@ func runTest(t *testing.T, ct *codeTest) {
 	}
 }
 
-const testId devices.Id = 0xc0ffee
+const testID devices.ID = 0xc0ffee
 
 type testDevice struct{}
 
-func (d *testDevice) Id() devices.Id                { return testId }
+func (d *testDevice) ID() devices.ID                { return testID }
 func (d *testDevice) Startup(devices.IntFunc) error { return nil }
 func (d *testDevice) Shutdown() error               { return nil }
 func (d *testDevice) Int(m devices.Memory)          { m.SetI16(R0, 123) }

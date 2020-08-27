@@ -20,6 +20,7 @@ const IntQueueCapacity = 32
 // TraceFunc represents a callback handler for debug trace output.
 type TraceFunc func(*Instruction)
 
+// CPU implements the runtime.
 type CPU struct {
 	devices     devices.Map // Connected peripherals.
 	trace       TraceFunc   // Handler for debug trace output.
@@ -45,9 +46,9 @@ func New(trace TraceFunc) *CPU {
 	}
 }
 
-// Id returns the cpu's device Id.
-func (c *CPU) Id() devices.Id {
-	return devices.NewId(0xfffe, 0x0001)
+// ID returns the cpu's device Id.
+func (c *CPU) ID() devices.ID {
+	return devices.NewID(0xfffe, 0x0001)
 }
 
 // Memory returns the cpu's internal memory bank.
@@ -65,10 +66,10 @@ func (c *CPU) Connect(dev devices.Device) bool {
 // Returns an error if a program is already loaded. Use Shutdown() first.
 func (c *CPU) Startup() error {
 	if !atomic.CompareAndSwapUint32(&c.initialized, 0, 1) {
-		return errors.New(c.Id().String() + " program is already loaded")
+		return errors.New(c.ID().String() + " program is already loaded")
 	}
 
-	log.Println(c.Id(), "startup")
+	log.Println(c.ID(), "startup")
 	for i := range c.memory {
 		c.memory[i] = 0
 	}
@@ -85,7 +86,7 @@ func (c *CPU) Shutdown() error {
 	if !atomic.CompareAndSwapUint32(&c.initialized, 1, 0) {
 		return nil
 	}
-	log.Println(c.Id(), "shutdown")
+	log.Println(c.ID(), "shutdown")
 	return c.devices.Shutdown()
 }
 
@@ -235,7 +236,7 @@ func (c *CPU) Step() error {
 		mem.SetU16(RIP, va)
 
 	case arch.HWA:
-		id := devices.NewId(args[1].Value, args[2].Value)
+		id := devices.NewID(args[1].Value, args[2].Value)
 		if index := c.devices.Find(id); index == -1 {
 			mem.SetRSTCompare(false)
 		} else {

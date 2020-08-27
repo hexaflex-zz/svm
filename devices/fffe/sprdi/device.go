@@ -26,6 +26,7 @@ const (
 	swap
 )
 
+// Various display and sprite properties.
 const (
 	DisplayWidth           = 256                // Display width in pixels.
 	DisplayHeight          = 240                // Display height in pixels.
@@ -62,6 +63,7 @@ type Device struct {
 
 var _ devices.Device = &Device{}
 
+// New creates a new device.
 func New() *Device {
 	return &Device{}
 }
@@ -84,10 +86,12 @@ func (d *Device) Draw() {
 	gl.DrawArrays(gl.TRIANGLES, 0, 6)
 }
 
-func (d *Device) Id() devices.Id {
-	return devices.NewId(0xfffe, 0x0002)
+// ID returns the device identifier.
+func (d *Device) ID() devices.ID {
+	return devices.NewID(0xfffe, 0x0002)
 }
 
+// Startup initializes device resources.
 func (d *Device) Startup(devices.IntFunc) error {
 	var err error
 
@@ -126,6 +130,7 @@ func (d *Device) Startup(devices.IntFunc) error {
 	return nil
 }
 
+// Shutdown clears up device resources.
 func (d *Device) Shutdown() error {
 	d.initialized = false
 	gl.DeleteTextures(1, &d.foregroundTex)

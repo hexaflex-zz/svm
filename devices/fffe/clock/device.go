@@ -10,7 +10,7 @@ import (
 
 // Known interrupt operations.
 const (
-	SetIntId = iota
+	SetIntID = iota
 	Uptime
 	SetTimer
 )
@@ -21,34 +21,38 @@ type Device struct {
 	start    time.Time          // Startup time.
 	endPoll  chan struct{}      // poll exit signaller.
 	newTimer chan time.Duration // new timer channel.
-	intId    int                // interrupt Id.
+	intID    int                // interrupt Id.
 }
 
 var _ devices.Device = &Device{}
 
+// New creates a new device instance.
 func New() *Device {
 	return &Device{}
 }
 
-func (d *Device) Id() devices.Id {
-	return devices.NewId(0xfffe, 0x0005)
+// ID returns the device id.
+func (d *Device) ID() devices.ID {
+	return devices.NewID(0xfffe, 0x0005)
 }
 
+// Startup initializes device resources.
 func (d *Device) Startup(f devices.IntFunc) error {
 	d.intFunc = f
 	d.start = time.Now()
-	d.intId = 0
+	d.intID = 0
 	d.endPoll = make(chan struct{}, 1)
 	d.newTimer = make(chan time.Duration, 1)
 	go d.poll()
 	return nil
 }
 
+// Shutdown clears device resources.
 func (d *Device) Shutdown() error {
 	close(d.endPoll)
 
 	d.intFunc = nil
-	d.intId = 0
+	d.intID = 0
 
 	return nil
 }
@@ -56,8 +60,8 @@ func (d *Device) Shutdown() error {
 // Int triggers an interrupt on the device. The device can read from- and write to system memory.
 func (d *Device) Int(mem devices.Memory) {
 	switch mem.U16(cpu.R0) {
-	case SetIntId:
-		d.intId = mem.U16(cpu.R1)
+	case SetIntID:
+		d.intID = mem.U16(cpu.R1)
 	case Uptime:
 		ms := int(time.Since(d.start).Milliseconds())
 		addr := mem.U16(cpu.R1)
@@ -80,8 +84,8 @@ func (d *Device) poll() {
 		case interval := <-d.newTimer:
 			timer = time.NewTicker(interval)
 		case <-timer.C:
-			if d.intId > 0 {
-				d.intFunc(d.intId)
+			if d.intID > 0 {
+				d.intFunc(d.intID)
 			}
 		}
 	}

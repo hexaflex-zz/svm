@@ -2,24 +2,26 @@ package devices
 
 import "fmt"
 
-// Id identifies a device.
+// ID identifies a device.
 // The upper 16 bits hold the device manufacturer id.
 // The lower 16 bits hold the device serial number.
-type Id uint32
+type ID uint32
 
 // NewId creates a new id with the given components.
-func NewId(manufacturer, serial int) Id {
-	return Id(manufacturer&0xffff)<<16 | Id(serial&0xffff)
+func NewID(manufacturer, serial int) ID {
+	return ID(manufacturer&0xffff)<<16 | ID(serial&0xffff)
 }
 
-func (id Id) Manufacturer() int {
+// Manufacturer returns the manufacturer component of the Id.
+func (id ID) Manufacturer() int {
 	return int(id>>16) & 0xffff
 }
 
-func (id Id) Serial() int {
+// Serial returns the device serial number component of the Id.
+func (id ID) Serial() int {
 	return int(id) & 0xffff
 }
 
-func (id Id) String() string {
+func (id ID) String() string {
 	return fmt.Sprintf("%04x:%04x", id.Manufacturer(), id.Serial())
 }
