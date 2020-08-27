@@ -2,7 +2,7 @@
  Assembler & Language
 ===============================================================================
 
- Document rev.: 22
+ Document rev.: 23
 
 
 ===============================================================================
@@ -216,6 +216,11 @@
                         | refer to relative memory offsets. It is valid in any
                         | operand expression.
  -----------------------|-----------------------------------------------------------
+  address x             | Tells the assembler to emit the next instructions at
+                        | address x and onwards. This allows the programmer to skip
+                        | arbitrary chunks of memory or overwrite existing code,
+                        | so use with care.
+ -----------------------|-----------------------------------------------------------
   import alias, path    | Imports a given compiled module. The alias is the name by
                         | which symbols in this module are referenced. If the alias
                         | is omitted, it defaults to the last component in the path.
@@ -229,17 +234,18 @@
   d16 args              | Writes raw 16-bit operand values into the program.
   d32 args              | Writes raw 32-bit operand values into the program.
   d64 args              | Writes raw 64-bit operand values into the program.
+ -----------------------|-----------------------------------------------------------
   reserve x             | Reserves x number of bytes without assigning any
                         | values to it.
- -----------------------|-----------------------------------------------------------
-  break                 | Inserts a breakpoint at the current address. If run in
-                        | debug mode by the VM, this will pause execution and allows
-                        | inspection of memory and registers etc.
  -----------------------|-----------------------------------------------------------
   macro name args       | Begins a macro definition with the given name and optional
                         | list of operand names. Refer to the Macros section for
                         | more information.
   endmacro              | Ends a macro definition.
+ -----------------------|-----------------------------------------------------------
+  break                 | Inserts a breakpoint at the current address. If run in
+                        | debug mode by the VM, this will pause execution and allows
+                        | inspection of memory and registers etc.
  -----------------------|-----------------------------------------------------------
 
 
