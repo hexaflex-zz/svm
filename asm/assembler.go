@@ -96,7 +96,7 @@ func (a *assembler) resolveEntrypoint(nodes *parser.List, module string) error {
 
 	// Now that we have inserted an instruction, the existing label
 	// addresses in the symbol table are no longer valid. Fix them.
-	offset := encodedLen(instr)
+	offset := encodedLen(instr, a.address)
 	for k := range a.symbols {
 		a.symbols[k] += offset
 	}
@@ -163,7 +163,7 @@ func (a *assembler) evaluateInstructions(nodes *parser.List, scope parser.Scope)
 
 		case parser.Instruction:
 			err := eval.Evaluate(n.(*parser.List), a.resolveReference, scope)
-			a.address += encodedLen(n)
+			a.address += encodedLen(n, a.address)
 			return err
 		}
 
@@ -395,7 +395,7 @@ func (a *assembler) resolveLabels(nodes *parser.List, scope parser.Scope) error 
 		}
 
 		if n.Type() != parser.Label {
-			a.address += encodedLen(n)
+			a.address += encodedLen(n, a.address)
 			continue
 		}
 
@@ -425,6 +425,7 @@ func (a *assembler) hasSymbol(name string) bool {
 
 // compile compiles all given instructions.
 func (a *assembler) compile(nodes *parser.List) error {
+	a.ar.Instructions = make([]byte, 0, 0x10000)
 	a.address = 0
 
 	return nodes.Each(func(_ int, n parser.Node) error {
@@ -447,7 +448,17 @@ func (a *assembler) compile(nodes *parser.List) error {
 // emit emits the given instruction.
 // It optionally generates debug symbols.
 func (a *assembler) emit(pos parser.Position, code []byte) {
-	a.ar.Instructions = append(a.ar.Instructions, code...)
+	if len(code) == 0 {
+		return
+	}
+
+	// Resize output buffer to fit the new code if needed.
+	if a.address+len(code) > len(a.ar.Instructions) {
+		size := (a.address + len(code)) - len(a.ar.Instructions)
+		a.ar.Instructions = append(a.ar.Instructions, make([]byte, size)...)
+	}
+
+	copy(a.ar.Instructions[a.address:], code)
 
 	address := a.address
 	a.address += len(code)
@@ -484,6 +495,11 @@ func (a *assembler) addDebugFile(file string) int {
 
 // encode encodes the given instruction into its final binary form.
 func (a *assembler) encode(instr *parser.List) ([]byte, error) {
+	if offset, ok := isAddrDirective(instr, a.address); ok {
+		a.address += offset
+		return nil, nil
+	}
+
 	if size, ok := isReservedDataDirective(instr); ok {
 		return make([]byte, size), nil
 	}
@@ -498,7 +514,7 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 		return nil, newError(name.Position(), "unknown instruction %q", name.Value)
 	}
 
-	out := make([]byte, 1, encodedLen(instr))
+	out := make([]byte, 1, encodedLen(instr, a.address))
 	out[0] = byte(opcode)
 
 	var mode byte
@@ -568,11 +584,14 @@ func encodeDataDirective(instr *parser.List, size int) []byte {
 		expr := instr.At(i).(*parser.List)
 		value := expr.At(0).(*parser.Value)
 
-		if value.Type() == parser.String {
+		switch {
+		case value.Type() == parser.AddressMode:
+			// nop
+		case value.Type() == parser.String:
 			for _, r := range value.Value {
 				out = writeData(out, int64(r), size)
 			}
-		} else {
+		default:
 			num, _ := parser.ParseNumber(value.Value)
 			out = writeData(out, num, size)
 		}
@@ -597,7 +616,12 @@ func writeData(out []byte, v int64, size int) []byte {
 }
 
 // encodedLen returns the byte size occupied by the given node's compiled version.
-func encodedLen(n parser.Node) int {
+// Address represents the current output address for the assembler.
+func encodedLen(n parser.Node, address int) int {
+	if size, ok := isAddrDirective(n, address); ok {
+		return size
+	}
+
 	if size, ok := isReservedDataDirective(n); ok {
 		return size
 	}
@@ -647,10 +671,13 @@ func dataDirectiveLen(instr *parser.List, bytesize int) int {
 	for i := 1; i < instr.Len(); i++ {
 		expr := instr.At(i).(*parser.List)
 
-		expr.Each(func(_ int, n parser.Node) error {
-			if n.Type() == parser.String {
+		expr.Each(func(i int, n parser.Node) error {
+			switch {
+			case n.Type() == parser.AddressMode:
+				/* nop */
+			case n.Type() == parser.String:
 				size += utf8.RuneCountInString(n.(*parser.Value).Value) * bytesize
-			} else {
+			default:
 				size += bytesize
 			}
 			return nil
@@ -696,9 +723,29 @@ func isReservedDataDirective(n parser.Node) (int, bool) {
 	}
 
 	expr := instr.At(1).(*parser.List)
-	num := expr.At(0).(*parser.Value)
+	num := expr.At(1).(*parser.Value)
 	x, _ := parser.ParseNumber(num.Value)
 	return int(x), true
+}
+
+// isAddrDirective returns true if n represents a `addr` directive.
+// The size being returned is the difference between the current output
+// address and the value in the `addr` directive. This can be a
+// negative value.
+func isAddrDirective(n parser.Node, address int) (int, bool) {
+	if n.Type() != parser.Instruction {
+		return 0, false
+	}
+
+	instr := n.(*parser.List)
+	if !isIdent(instr.At(0), "address") {
+		return 0, false
+	}
+
+	expr := instr.At(1).(*parser.List)
+	num := expr.At(1).(*parser.Value)
+	x, _ := parser.ParseNumber(num.Value)
+	return int(x) - address, true
 }
 
 // isIdent returns true if n represents an ident with the given name.

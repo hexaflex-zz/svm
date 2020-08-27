@@ -1,0 +1,17 @@
+;
+; svm-asm -import testdata -out testdata/test.a -debug examples/address
+; svm-fdd -out testdata/test.img testdata/test.a
+; svm -debug testdata/test.img
+; 
+
+:main {
+    mov r1, $123
+    halt
+
+    ; This should overwrite the instructions above,
+    ; making r1 end up with the value 432 instead of 123.
+    address $0
+
+    mov r1, $432
+    halt
+}
