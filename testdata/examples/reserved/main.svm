@@ -1,10 +1,9 @@
 
 :main {
-    mov r0, $foo
-    mov r1, foo
+    mov r0, foo
+    mov r1, bar
     halt
 }
 
-reserve 16#ff
-
-:foo d8 123
+:foo reserve $16#ff
+:bar d8 $123
