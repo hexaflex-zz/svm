@@ -42,8 +42,6 @@ language, the architecture and how to interact with peripherals.
 
 ### TODO
 
-* Find way to explicitely force section of code to be located at a given address.
-  E.g.: bootstrap code should always be located in the boot sector of a disk.
 * Add audio support.
   * Create a specification for a audio hardware.
   * Create a device implementation of the specification.
