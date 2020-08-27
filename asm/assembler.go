@@ -584,9 +584,11 @@ func encodeDataDirective(instr *parser.List, size int) []byte {
 		expr := instr.At(i).(*parser.List)
 		value := expr.At(0).(*parser.Value)
 
+		if value.Type() == parser.AddressMode {
+			value = expr.At(1).(*parser.Value)
+		}
+
 		switch {
-		case value.Type() == parser.AddressMode:
-			// nop
 		case value.Type() == parser.String:
 			for _, r := range value.Value {
 				out = writeData(out, int64(r), size)
@@ -671,7 +673,7 @@ func dataDirectiveLen(instr *parser.List, bytesize int) int {
 	for i := 1; i < instr.Len(); i++ {
 		expr := instr.At(i).(*parser.List)
 
-		expr.Each(func(i int, n parser.Node) error {
+		expr.Each(func(_ int, n parser.Node) error {
 			switch {
 			case n.Type() == parser.AddressMode:
 				/* nop */
