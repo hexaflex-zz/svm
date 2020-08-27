@@ -12,8 +12,11 @@ import (
 	_ "image/png"
 )
 
-const SpriteWidth = 8
-const SpriteHeight = 8
+// These define pixel dimensions for a single sprite frame.
+const (
+	SpriteWidth  = 8
+	SpriteHeight = 8
+)
 
 func main() {
 	config := parseArgs()
