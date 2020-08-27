@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 )
 
+// Various version related constants.
 const (
 	AppVendor  = "hexaflex"
 	AppName    = "svm"

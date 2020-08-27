@@ -5,10 +5,11 @@ import (
 	"runtime/debug"
 )
 
+// Various version related constants.
 const (
 	AppVendor  = "hexaflex"
 	AppName    = "svm-asm"
-	AppVersion = "v2.0.0"
+	AppVersion = "v2.1.0"
 )
 
 // Version returns program version information.
