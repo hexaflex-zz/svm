@@ -37,7 +37,7 @@ func translate(out io.Writer, img image.Image) {
 	fmt.Fprintf(out, "const SpriteCount = %d\n\n:Sprites\n", w*h)
 
 	str := make([]byte, 7, 16)
-	copy(str, []byte("d32 16#"))
+	copy(str, []byte("d32 $16#"))
 
 	for y := 0; y < h; y++ {
 		sy := r.Min.Y + y*SpriteHeight
