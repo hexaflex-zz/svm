@@ -2,29 +2,21 @@ package devices
 
 // Memory defines the system's memory bank.
 type Memory interface {
-	// SetI8 sets the 8-bit value at the given address.
+	// I8 defines a signed 8-bit value at the given address.
+	I8(addr int) int
 	SetI8(addr, value int)
 
-	// I8 returns the 8-bit value at the given address.
-	I8(addr int) int
-
-	// SetU8 sets the 8-bit value at the given address.
+	// U8 defines an unsigned 8-bit value at the given address.
+	U8(addr int) int
 	SetU8(addr, value int)
 
-	// U8 returns the 8-bit value at the given address.
-	U8(addr int) int
-
-	// SetI16 sets the 16-bit value at the given address.
+	// I16 defines a signed 16-bit value at the given address.
+	I16(addr int) int
 	SetI16(addr, value int)
 
-	// I16 returns the 16-bit value at the given address.
-	I16(addr int) int
-
-	// SetU16 sets the 16-bit value at the given address.
-	SetU16(addr, value int)
-
-	// U16 returns the 16-bit value at the given address.
+	// U16 defines an unsigned 16-bit value at the given address.
 	U16(addr int) int
+	SetU16(addr, value int)
 
 	// Write writes len(p) bytes from p into memory, starting at the given address.
 	Write(address int, p []byte)
