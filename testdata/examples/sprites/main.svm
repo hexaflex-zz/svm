@@ -33,10 +33,12 @@ import "examples/sprites/font"
 ; This is the color used by our font sprites.
 ;------------------------------------------------------------------------------
 :recolor {
-    rng palette+30, $0, $16#ffff                                               ; Set the last palette color to something random.
-    mov r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
-    mov r1, $palette
-    int sprdi.Device
+    rng8 palette+45, $0, $16#ff                                                ; Set the last palette color to something random.
+    rng8 palette+46, $0, $16#ff
+    rng8 palette+47, $0, $16#ff
+    mov  r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
+    mov  r1, $palette
+    int  sprdi.Device
     ret
 }
 
@@ -80,20 +82,22 @@ const len_helloWorld = 13
 :str_helloWorld
     d8 $"Hello, world!"
 
+
+; palette from: http://pixeljoint.com/forum/forum_posts.asp?TID=12795
 :palette
-    d16 $0
-    d16 $2#11111_000000_00000
-    d16 $2#00000_000000_00000
-    d16 $2#00010_000010_00010
-    d16 $2#00100_000100_00100
-    d16 $2#01000_001000_01000
-    d16 $2#01010_001010_01010
-    d16 $2#10000_010000_10000
-    d16 $2#10010_010010_10010
-    d16 $2#10100_010100_10100
-    d16 $2#10110_010110_10110
-    d16 $2#11000_011000_11000
-    d16 $2#11010_011010_11010
-    d16 $2#11100_011100_11100
-    d16 $2#11110_011110_11110
-    d16 $2#11111_111111_11111
+    d8 $20, $12, $28
+    d8 $68, $36, $52
+    d8 $48, $52, $109
+    d8 $78, $74, $78
+    d8 $133, $76, $48
+    d8 $52, $101, $36
+    d8 $208, $70, $72
+    d8 $117, $113, $97
+    d8 $89, $125, $206
+    d8 $210, $125, $44
+    d8 $133, $149, $161
+    d8 $109, $170, $44
+    d8 $210, $170, $153
+    d8 $109, $194, $202
+    d8 $218, $212, $94
+    d8 $222, $238, $214 

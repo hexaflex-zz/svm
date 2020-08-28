@@ -2,7 +2,6 @@
 package sprdi
 
 import (
-	"fmt"
 	"log"
 	"unsafe"
 
@@ -285,57 +284,33 @@ func (d *Device) setSprites(src devices.Memory, address, index, count int) {
 	}
 }
 
-func dumpSprite4bpp(mem devices.Memory, address int) {
-	const Stride = SpritePixelSize >> 1
-	var row [Stride]byte
-	for y := 0; y < SpritePixelSize; y++ {
-		mem.Read(address+y*Stride, row[:])
-		fmt.Printf("%02x\n", row[:])
-	}
-	fmt.Println()
-}
-
-func dumpSprite8bpp(p []byte) {
-	for y := 0; y < SpritePixelSize; y++ {
-		fmt.Printf("%02x\n", p[y*SpritePixelSize:y*SpritePixelSize+SpritePixelSize])
-	}
-	fmt.Println()
-}
-
 func (d *Device) setBackgroundPalette(mem devices.Memory) {
-	addr := mem.U16(cpu.R1)
-	pal := d.palette[:PaletteSize*4]
-	pal[3] = 0 // First color is always transparent.
-
-	for i := 1; i < PaletteSize; i++ {
-		n2f(mem.U16(addr+i*2), pal[i*4:])
-	}
-
-	d.paletteDirty = true
+	d.setPalette(d.palette[:PaletteSize*4], mem)
 }
 
 func (d *Device) setForegroundPalette(mem devices.Memory) {
-	addr := mem.U16(cpu.R1)
-	pal := d.palette[PaletteSize*4:]
-	pal[3] = 0 // First color is always transparent.
+	d.setPalette(d.palette[PaletteSize*4:], mem)
+}
 
-	for i := 1; i < PaletteSize; i++ {
-		n2f(mem.U16(addr+i*2), pal[i*4:])
+func (d *Device) setPalette(pal []float32, mem devices.Memory) {
+	addr := mem.U16(cpu.R1)
+
+	for i := 0; i < PaletteSize; i++ {
+		r := mem.U8(addr + i*3 + 0)
+		g := mem.U8(addr + i*3 + 1)
+		b := mem.U8(addr + i*3 + 2)
+		n2f(r, g, b, pal[i*4:])
 	}
 
 	d.paletteDirty = true
 }
 
-// f2n coverts the RGBA color in p to its 16-bit RGB565 equivalent.
-func f2n(p []float32) int {
-	return int(p[0]*0.31)<<11 | int(p[1]*0.63)<<5 | int(p[2]*0.31)
-}
-
-// n2f sets p to the RGBA8 representation RGB565 color in n.
-func n2f(n int, p []float32) {
-	p[0] = float32((n>>11)&31) / 31
-	p[1] = float32((n>>5)&63) / 63
-	p[2] = float32(n&31) / 31
+// n2f sets converts the given RGB components in the range [0,255] to
+// their floating point equivalents and stores them in p.
+func n2f(r, g, b int, p []float32) {
+	p[0] = float32(r&255) / 255
+	p[1] = float32(g&255) / 255
+	p[2] = float32(b&255) / 255
 	p[3] = 1
 }
 
