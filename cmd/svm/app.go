@@ -317,7 +317,9 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	if dbg != nil {
 		pad(&sb, 40)
 		file := a.debug.Files[dbg.File]
-		fmt.Fprintf(&sb, " %s:%d:%d", file, dbg.Line, dbg.Col)
+		if len(file) > 0 {
+			fmt.Fprintf(&sb, " %s:%d:%d", file, dbg.Line, dbg.Col)
+		}
 	}
 
 	fmt.Printf("%04x %5s  %s\n", i.IP, name, sb.String())
