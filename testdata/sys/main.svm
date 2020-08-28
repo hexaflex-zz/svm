@@ -10,7 +10,6 @@ import "fd35"
 import "sprdi"
 import "gp14"
 import "clock"
-import "as4"
 
 ; Bootstrap performs some boilerplate initialization.
 ; This is a macro to ensure it is embedded in the boot sector.
@@ -28,8 +27,5 @@ macro Bootstrap exitHandler
     jez exitHandler
 
     hwa clock.Device, $clock.Manufacturer, $clock.Serial                       ; Find the device index for the clock.
-    jez exitHandler
-
-    hwa as4.Device, $as4.Manufacturer, $as4.Serial                             ; Find the device index for the audio synthesizer.
     jez exitHandler
 endmacro
