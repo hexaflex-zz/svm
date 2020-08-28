@@ -2,12 +2,14 @@ package cpu
 
 import "io"
 
+// Memory related properties.
 const (
 	UserMemoryCapacity = 0x10000                               // Size of user space.
 	RegisterCapacity   = 12 * 2                                // Space occupied by registers.
 	MemoryCapacity     = UserMemoryCapacity + RegisterCapacity // Total memory capacity: userspace + registers.
 )
 
+// Register addresses.
 const (
 	R0  = UserMemoryCapacity // Address for general purpose register R0.
 	R1  = R0 + 2             // Address for general purpose register R1.
@@ -79,15 +81,21 @@ func (m Memory) Read(address int, p []byte) {
 }
 
 // RSTCompare defines the state of the RST/compare flag.
-func (m Memory) RSTCompare() bool     { return m.rst(1) }
+func (m Memory) RSTCompare() bool { return m.rst(1) }
+
+// SetRSTCompare sets the state of the RST/compare flag.
 func (m Memory) SetRSTCompare(v bool) { m.setRST(1, v) }
 
 // RSTOverflow defines the state of the RST/overflow flag.
-func (m Memory) RSTOverflow() bool     { return m.rst(2) }
+func (m Memory) RSTOverflow() bool { return m.rst(2) }
+
+// SetRSTOverflow sets the state of the RST/overflow flag.
 func (m Memory) SetRSTOverflow(v bool) { m.setRST(2, v) }
 
-// RSTOverflow defines the state of the RST/divide-by-zero flag.
-func (m Memory) RSTDivideByZero() bool     { return m.rst(4) }
+// RSTDivideByZero defines the state of the RST/divide-by-zero flag.
+func (m Memory) RSTDivideByZero() bool { return m.rst(4) }
+
+// SetRSTDivideByZero sets the state of the RST/divide-by-zero flag.
 func (m Memory) SetRSTDivideByZero(v bool) { m.setRST(4, v) }
 
 // RSTCompare returns the state of the given RST flag.

@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0002
- Document rev.: 10
+ Document rev.: 11
 
  This device serves as a display for simple tiled graphics with a fixed
  resolution of 256 x 240 pixels. It manages internal foreground- and background
@@ -111,7 +111,7 @@
 
  Each pixel in a sprite is defined as a 4 bit index into this palette.
  The palette itself contains 16 color entries. Each color has a 24-bit RGB888
- format.
+ format. The first entry in a palette is always considered transparent.
 
 
 ===============================================================================

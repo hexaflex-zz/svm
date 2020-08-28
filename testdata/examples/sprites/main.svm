@@ -33,7 +33,7 @@ import "examples/sprites/font"
 ; This is the color used by our font sprites.
 ;------------------------------------------------------------------------------
 :recolor {
-    rng8 palette+45, $0, $16#ff                                                ; Set the last palette color to something random.
+    rng8 palette+45, $0, $16#ff                                                 ; Set the last palette color to something random.
     rng8 palette+46, $0, $16#ff
     rng8 palette+47, $0, $16#ff
     mov  r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
@@ -85,7 +85,7 @@ const len_helloWorld = 13
 
 ; palette from: http://pixeljoint.com/forum/forum_posts.asp?TID=12795
 :palette
-    d8 $20, $12, $28
+    d8 $20, $12, $28        ; this one is always transparent
     d8 $68, $36, $52
     d8 $48, $52, $109
     d8 $78, $74, $78

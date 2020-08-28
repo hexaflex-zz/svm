@@ -294,8 +294,9 @@ func (d *Device) setForegroundPalette(mem devices.Memory) {
 
 func (d *Device) setPalette(pal []float32, mem devices.Memory) {
 	addr := mem.U16(cpu.R1)
+	pal[3] = 0 // First entry is always transparent.
 
-	for i := 0; i < PaletteSize; i++ {
+	for i := 1; i < PaletteSize; i++ {
 		r := mem.U8(addr + i*3 + 0)
 		g := mem.U8(addr + i*3 + 1)
 		b := mem.U8(addr + i*3 + 2)

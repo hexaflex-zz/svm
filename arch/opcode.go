@@ -46,6 +46,7 @@ const (
 	INT
 
 	WAIT
+	RNG8
 )
 
 // Opcode returns the opcode for the given instruction name.
@@ -127,6 +128,8 @@ func Opcode(name string) (int, bool) {
 
 	case "WAIT":
 		return WAIT, true
+	case "RNG8":
+		return RNG8, true
 	}
 
 	return 0, false
@@ -211,6 +214,8 @@ func Name(opcode int) (string, bool) {
 
 	case WAIT:
 		return "WAIT", true
+	case RNG8:
+		return "RNG8", true
 	}
 
 	return "", false
@@ -220,7 +225,7 @@ func Name(opcode int) (string, bool) {
 // Returns -1 if the opcode is not recognized.
 func Argc(opcode int) int {
 	switch opcode {
-	case ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, OR, XOR, HWA, POW, RNG:
+	case ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, OR, XOR, HWA, POW, RNG, RNG8:
 		return 3
 	case MOV, CEQ, CNE, CGT, CGE, CLT, CLE, ABS:
 		return 2

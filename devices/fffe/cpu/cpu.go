@@ -129,6 +129,16 @@ func (c *CPU) Step() error {
 			mem.SetRSTOverflow(false)
 			mem.SetI16(va, vb+c.rng.Intn(vc-vb))
 		}
+	case arch.RNG8:
+		va := args[0].Address
+		vb := int(uint8(int8(args[1].Value)))
+		vc := int(uint8(int8(args[2].Value)))
+		if vc-vb < 0 {
+			mem.SetRSTOverflow(true)
+		} else {
+			mem.SetRSTOverflow(false)
+			mem.SetI8(va, vb+c.rng.Intn(vc-vb))
+		}
 	case arch.SEED:
 		va := args[0].Value
 		c.rng = rand.New(rand.NewSource(int64(va)))
