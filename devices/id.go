@@ -7,7 +7,7 @@ import "fmt"
 // The lower 16 bits hold the device serial number.
 type ID uint32
 
-// NewId creates a new id with the given components.
+// NewID creates a new id with the given components.
 func NewID(manufacturer, serial int) ID {
 	return ID(manufacturer&0xffff)<<16 | ID(serial&0xffff)
 }
