@@ -12,10 +12,9 @@ import (
 	"github.com/hexaflex/svm/arch"
 )
 
-//AST defines an Abstract Syntax Tree for ZVM sources.
+// AST defines an Abstract Syntax Tree for SVM sources.
 type AST struct {
-	files []string // Source files which were parsed into the AST.
-	nodes *List    // AST node tree.
+	nodes *List // AST node tree.
 }
 
 //NewAST creates a new, empty AST.
@@ -23,11 +22,6 @@ func NewAST() *AST {
 	return &AST{
 		nodes: NewList(Position{}, 0),
 	}
-}
-
-// Files returns the list of file names associated with this AST.
-func (a *AST) Files() []string {
-	return a.files
 }
 
 // Nodes returns the top level node list.
@@ -38,12 +32,6 @@ func (a *AST) Nodes() *List {
 // SetNodes sets the top level node list.
 func (a *AST) SetNodes(set *List) {
 	a.nodes = set
-}
-
-// Merge merges the contents of b into a.
-func (a *AST) Merge(b *AST) {
-	a.files = append(a.files, b.files...)
-	a.nodes.children = append(a.nodes.children, b.nodes.children...)
 }
 
 // ParseFile parses the given file into the AST.
@@ -66,11 +54,6 @@ func (a *AST) Parse(r io.Reader, filename string) error {
 		return err
 	}
 
-	if a.hasFile(filename) {
-		return nil // silently ignore duplicate files.
-	}
-
-	a.files = append(a.files, filename)
 	stack := []*List{a.nodes}
 
 	return tokenize(r, filename, func(tt int, pos Position, value string) error {
@@ -179,16 +162,6 @@ func (a *AST) verifyFilename(filename string) (string, error) {
 	}
 
 	return filename, nil
-}
-
-// hasFile returns true if the AST has seen the given file before.
-func (a *AST) hasFile(filename string) bool {
-	for _, v := range a.files {
-		if v == filename {
-			return true
-		}
-	}
-	return false
 }
 
 // String returns a human readable string representation of the node tree.

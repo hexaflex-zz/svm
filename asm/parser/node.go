@@ -1,5 +1,6 @@
 package parser
 
+// Type represents an AST node type.
 type Type int
 
 // Known node types.

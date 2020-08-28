@@ -30,6 +30,7 @@ func (s Scope) String() string {
 	return string(s)
 }
 
+// Len returns the length of the scope path.
 func (s Scope) Len() int {
 	return len(s)
 }

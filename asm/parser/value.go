@@ -8,6 +8,7 @@ type Value struct {
 	Value string
 }
 
+// NewValue creates a new value with the given properies.
 func NewValue(pos Position, ntype Type, value string) *Value {
 	return &Value{
 		nodeBase: newNodeBase(pos, ntype),

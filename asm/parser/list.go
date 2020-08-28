@@ -16,64 +16,68 @@ func NewList(pos Position, ntype Type) *List {
 }
 
 // String returns a human readable string representation of the list.
-func (n *List) String() string {
+func (l *List) String() string {
 	var sb strings.Builder
-	dumpNode(&sb, n, "")
+	dumpNode(&sb, l, "")
 	return sb.String()
 }
 
-func (n *List) Len() int {
-	return len(n.children)
+// Len returns the number of nodes in the list.
+func (l *List) Len() int {
+	return len(l.children)
 }
 
-func (n *List) Clear() {
-	n.children = n.children[:0]
+// Clear empties the list.
+func (l *List) Clear() {
+	l.children = l.children[:0]
 }
 
-func (n *List) Append(set ...Node) {
-	n.ReplaceAt(n.Len(), set...)
+// Append adds the given nodes to the end of the list.
+func (l *List) Append(set ...Node) {
+	l.ReplaceAt(l.Len(), set...)
 }
 
 // At returns the node at index n.
-func (n *List) At(x int) Node {
-	return n.children[x]
+func (l *List) At(x int) Node {
+	return l.children[x]
 }
 
 // Slice returns the list of child elements as a slice.
-func (n *List) Slice() []Node {
-	return n.children
+func (l *List) Slice() []Node {
+	return l.children
 }
 
 // RemoveRange removes a range of nodes from the list.
-func (n *List) RemoveRange(start, end int) {
-	copy(n.children[start:], n.children[end+1:])
+func (l *List) RemoveRange(start, end int) {
+	copy(l.children[start:], l.children[end+1:])
 
-	end = len(n.children) - (end - start) - 1
+	end = len(l.children) - (end - start) - 1
 
-	for i := end; i < len(n.children); i++ {
-		n.children[i] = nil
+	for i := end; i < len(l.children); i++ {
+		l.children[i] = nil
 	}
 
-	n.children = n.children[:end]
+	l.children = l.children[:end]
 }
 
 // Remove removes the node at index from the list.
-func (n *List) Remove(index int) {
-	n.ReplaceAt(index)
+func (l *List) Remove(index int) {
+	l.ReplaceAt(index)
 }
 
 // Copy returns a deep copy of this list and its contents.
-func (n *List) Copy() Node {
-	nn := NewList(n.pos, n.ntype)
-	nn.children = make([]Node, len(n.children))
+func (l *List) Copy() Node {
+	nn := NewList(l.pos, l.ntype)
+	nn.children = make([]Node, len(l.children))
 
-	for i := range n.children {
-		nn.children[i] = n.children[i].Copy()
+	for i := range l.children {
+		nn.children[i] = l.children[i].Copy()
 	}
 
 	return nn
 }
 
+// IterFunc defines a handler used for every list element called by List.Each
 type IterFunc func(int, Node) error
 
 // Each calls f for each element in the list.
@@ -87,6 +91,7 @@ func (l *List) Each(f IterFunc) error {
 	return nil
 }
 
+// FilterFunc defines a handler used for every list element called by List.Filter
 type FilterFunc func(int, Node) bool
 
 // Filter calls f for each element in the list and removes the element
@@ -110,10 +115,10 @@ type ReplaceFunc func(int, Node) ([]Node, error)
 // Replace calls f for each node in the list.
 // If f returns a non-nil set of nodes, the current node is replaced
 // with those which have been returned.
-func (n *List) Replace(f ReplaceFunc) error {
-	set := make([]Node, 0, n.Len())
+func (l *List) Replace(f ReplaceFunc) error {
+	set := make([]Node, 0, l.Len())
 
-	for i, v := range n.children {
+	for i, v := range l.children {
 		new, err := f(i, v)
 		if err != nil {
 			return err
@@ -126,42 +131,42 @@ func (n *List) Replace(f ReplaceFunc) error {
 		}
 	}
 
-	n.children = set
+	l.children = set
 	return nil
 }
 
 // ReplaceAt replaces the node at index with the given set.
 // ReplaceAt(x, nil) is equivalent to Remove(x).
 // ReplaceAt(len(List), set) is equivalent to Append(set...).
-func (n *List) ReplaceAt(index int, set ...Node) {
+func (l *List) ReplaceAt(index int, set ...Node) {
 	switch {
 	case len(set) == 0:
-		copy(n.children[index:], n.children[index+1:])
-		n.children[len(n.children)-1] = nil
-		n.children = n.children[:len(n.children)-1]
+		copy(l.children[index:], l.children[index+1:])
+		l.children[len(l.children)-1] = nil
+		l.children = l.children[:len(l.children)-1]
 
-	case index >= n.Len():
-		n.children = append(n.children, set...)
+	case index >= l.Len():
+		l.children = append(l.children, set...)
 
 	case len(set) == 1:
-		n.children[index] = set[0]
+		l.children[index] = set[0]
 
 	default:
-		out := append(n.children, set[1:]...)
+		out := append(l.children, set[1:]...)
 		copy(out[index+len(set):], out[index+1:])
 		copy(out[index:], set)
-		n.children = out
+		l.children = out
 	}
 }
 
 // InsertAt inserts one or more nodes at the given index.
-func (n *List) InsertAt(index int, set ...Node) {
+func (l *List) InsertAt(index int, set ...Node) {
 	if len(set) == 0 {
 		return
 	}
 
-	out := append(n.children, set...)
+	out := append(l.children, set...)
 	copy(out[index+len(set):], out[index:])
 	copy(out[index:], set)
-	n.children = out
+	l.children = out
 }
