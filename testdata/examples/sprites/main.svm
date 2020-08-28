@@ -1,14 +1,13 @@
 ;
-; svm-asm -import testdata -out testdata/test.a -debug examples/sprites
+; svm-asm -include testdata -out testdata/test.a -debug examples/sprites/main.svm
 ; svm-fdd -out testdata/test.img testdata/test.a
 ; svm -debug testdata/test.img
 ;
 
-import "fd35"
-import "gp14"
-import "sprdi"
-import "sys"
-import "examples/sprites/font"
+include "sys/fd35.svm"
+include "sys/sprdi.svm"
+include "sys/gp14.svm"
+include "sys/clock.svm"
 
 ;------------------------------------------------------------------------------
 ; Program entrypoint.
@@ -29,24 +28,20 @@ import "examples/sprites/font"
 }
 
 ;------------------------------------------------------------------------------
-; recolor changes the last color in the background palette to a random value.
-; This is the color used by our font sprites.
-;------------------------------------------------------------------------------
-:recolor {
-    rng8 palette+45, $0, $16#ff                                                 ; Set the last palette color to something random.
-    rng8 palette+46, $0, $16#ff
-    rng8 palette+47, $0, $16#ff
-    mov  r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
-    mov  r1, $palette
-    int  sprdi.Device
-    ret
-}
-
-;------------------------------------------------------------------------------
 ; setup initializes various devices properties.
 ;------------------------------------------------------------------------------
 :setup {
-    sys.Bootstrap $deviceNotFound
+    hwa fd35.Device, $fd35.Manufacturer, $fd35.Serial                          ; Find the device index for the floppy disk drive.
+    jez $deviceNotFound
+
+    hwa sprdi.Device, $sprdi.Manufacturer, $sprdi.Serial                       ; Find the device index for the display.
+    jez $deviceNotFound
+
+    hwa gp14.Device, $gp14.Manufacturer, $gp14.Serial                          ; Find the device index for the gamepad.
+    jez $deviceNotFound
+
+    hwa clock.Device, $clock.Manufacturer, $clock.Serial                       ; Find the device index for the clock.
+    jez $deviceNotFound
 
     fd35.SyncReadSector $(1 * fd35.SectorByteSize), $1                         ; Load extra sectors into memory. We are currently lacking some font sprites.
     fd35.SyncReadSector $(2 * fd35.SectorByteSize), $2
@@ -76,28 +71,25 @@ import "examples/sprites/font"
 
 
 ;------------------------------------------------------------------------------
+; recolor changes the last color in the background palette to a random value.
+; This is the color used by our font sprites.
+;------------------------------------------------------------------------------
+:recolor {
+    rng8 palette+45, $0, $16#ff                                                 ; Set the last palette color to something random.
+    rng8 palette+46, $0, $16#ff
+    rng8 palette+47, $0, $16#ff
+    mov  r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
+    mov  r1, $palette
+    int  sprdi.Device
+    ret
+}
+
+;------------------------------------------------------------------------------
 ; Variables & embedded data
 ;------------------------------------------------------------------------------
 const len_helloWorld = 13
 :str_helloWorld
     d8 $"Hello, world!"
 
-
-; palette from: http://pixeljoint.com/forum/forum_posts.asp?TID=12795
-:palette
-    d8 $20, $12, $28        ; this one is always transparent
-    d8 $68, $36, $52
-    d8 $48, $52, $109
-    d8 $78, $74, $78
-    d8 $133, $76, $48
-    d8 $52, $101, $36
-    d8 $208, $70, $72
-    d8 $117, $113, $97
-    d8 $89, $125, $206
-    d8 $210, $125, $44
-    d8 $133, $149, $161
-    d8 $109, $170, $44
-    d8 $210, $170, $153
-    d8 $109, $194, $202
-    d8 $218, $212, $94
-    d8 $222, $238, $214 
+include "palette.svm"
+include "font.svm"

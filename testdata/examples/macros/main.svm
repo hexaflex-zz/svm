@@ -1,0 +1,14 @@
+;
+; svm-asm -out testdata/test.a -debug examples/macros/main.svm
+; svm-fdd -out testdata/test.img testdata/test.a
+; svm -debug testdata/test.img
+;
+
+macro divmod w, x, y, z
+    div w, y, z
+    mod x, y, z
+endmacro
+
+
+:main
+    divmod r0, r1, $2, $42

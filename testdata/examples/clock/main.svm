@@ -1,10 +1,10 @@
 ;
-; svm-asm -import testdata -out testdata/test.a -debug examples/clock
+; svm-asm -include testdata -out testdata/test.a -debug examples/clock/main.svm
 ; svm-fdd -out testdata/test.img testdata/test.a
 ; svm -debug testdata/test.img
 ; 
 
-import "clock"
+include "sys/clock.svm"
 
 :main {
     mov ria, $intHandler                                                       ; Define a new hardware interrupt handler.

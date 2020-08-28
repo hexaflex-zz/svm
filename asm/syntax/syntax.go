@@ -4,7 +4,7 @@ package syntax
 
 import (
 	"fmt"
-	"path/filepath"
+	"os"
 	"strings"
 	"sync/atomic"
 
@@ -15,20 +15,15 @@ import (
 // Verify performs syntax verification on the given AST to ensure it has a sane state.
 // Additionally performs some mutations to simplify or amend structure where needed.
 func Verify(ast *parser.AST) error {
+	if err := translateNames(ast.Nodes()); err != nil {
+		return err
+	}
+
 	if err := translateConst(ast.Nodes()); err != nil {
 		return err
 	}
 
 	if err := fixScopeNames(ast.Nodes()); err != nil {
-		return err
-	}
-
-	aliases, err := parseImports(ast.Nodes())
-	if err != nil {
-		return err
-	}
-
-	if err := fixAliases(ast.Nodes(), aliases); err != nil {
 		return err
 	}
 
@@ -45,6 +40,32 @@ func Verify(ast *parser.AST) error {
 	}
 
 	return testNumbers(ast.Nodes())
+}
+
+// translateNames finds all idents and replaces dots with path separators.
+// Since that is the form in which symbols with scope paths are stored by the assembler.
+// E.g.: `gp14.ButtonA` becomes `gp14/ButtonA`.
+func translateNames(nodes *parser.List) error {
+	const Sep = string(os.PathSeparator)
+
+	for i := 0; i < nodes.Len(); i++ {
+		node := nodes.At(i)
+
+		if list, ok := node.(*parser.List); ok {
+			if err := translateNames(list); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if node.Type() != parser.Ident {
+			continue
+		}
+
+		ident := node.(*parser.Value)
+		ident.Value = strings.ReplaceAll(ident.Value, ".", Sep)
+	}
+	return nil
 }
 
 // testMacros finds macro definitions and ensures they have a sane layout.
@@ -75,25 +96,36 @@ func testMacros(nodes *parser.List) error {
 	})
 }
 
-// fixScopeNames finds all empty ScopeBegin nodes and generates unique names for them.
+// fixScopeNames finds all empty ScopeBegin nodes and generates unique names for them,
+// or assigns user-provided names to them if applicable. This is the case when a ScopeBegin
+// node is immediately preceeded by a label. The label becomes the scope's name.
 func fixScopeNames(nodes *parser.List) error {
-	return nodes.Each(func(_ int, n parser.Node) error {
-		if list, ok := n.(*parser.List); ok {
-			return fixScopeNames(list)
+	for i := 0; i < nodes.Len(); i++ {
+		node := nodes.At(i)
+
+		if list, ok := node.(*parser.List); ok {
+			if err := fixScopeNames(list); err != nil {
+				return err
+			}
+			continue
 		}
 
-		if n.Type() != parser.ScopeBegin {
-			return nil
+		if node.Type() != parser.ScopeBegin {
+			continue
 		}
 
-		scope := n.(*parser.Value)
+		scope := node.(*parser.Value)
 
 		if len(scope.Value) == 0 {
-			scope.Value = UniqueName()
+			if i > 0 && nodes.At(i-1).Type() == parser.Label {
+				lbl := nodes.At(i - 1).(*parser.Value)
+				scope.Value = lbl.Value
+			} else {
+				scope.Value = UniqueName()
+			}
 		}
-
-		return nil
-	})
+	}
+	return nil
 }
 
 // translateConst finds constant definitions, It looks for uses of these in the rest
@@ -359,126 +391,6 @@ func testNumbers(nodes *parser.List) error {
 
 		return nil
 	})
-}
-
-// fixAliases finds uses of import aliases and replaces the alias part with full import paths.
-func fixAliases(nodes *parser.List, aliases map[string]string) error {
-	return nodes.Each(func(_ int, n parser.Node) error {
-		if n.Type() == parser.Macro {
-			return fixAliases(n.(*parser.List), aliases)
-		}
-
-		if n.Type() != parser.Instruction && n.Type() != parser.Constant {
-			return nil
-		}
-
-		instr := n.(*parser.List)
-
-		name := instr.At(0).(*parser.Value)
-		fixAliasIdent(name, aliases)
-
-		for i := 1; i < instr.Len(); i++ {
-			expr := instr.At(i).(*parser.List)
-			for j := 0; j < expr.Len(); j++ {
-				n := expr.At(j)
-				if n.Type() == parser.Ident {
-					fixAliasIdent(n.(*parser.Value), aliases)
-				}
-			}
-		}
-
-		return nil
-	})
-}
-
-// fixAliasIdent checks if the given ident defines a reference to an external symbol.
-// The alias component is replaced with the import path if possible.
-func fixAliasIdent(ident *parser.Value, aliases map[string]string) {
-	if index := strings.Index(ident.Value, "."); index > -1 {
-		alias := strings.ToLower(ident.Value[:index])
-		if path, ok := aliases[alias]; ok {
-			ident.Value = filepath.Join(path, ident.Value[index+1:])
-		}
-	}
-}
-
-// parseImports ensures import statements have the correct layout.
-// Returns a mapping of aliases to path names. Import nodes are removed.
-func parseImports(nodes *parser.List) (map[string]string, error) {
-	aliases := make(map[string]string)
-	return aliases, parseImportsRec(nodes, aliases)
-}
-
-func parseImportsRec(nodes *parser.List, aliases map[string]string) error {
-	for i := 0; i < nodes.Len(); i++ {
-		n := nodes.At(i)
-
-		if n.Type() == parser.Macro {
-			if err := parseImportsRec(n.(*parser.List), aliases); err != nil {
-				return err
-			}
-		}
-
-		instr, ok := isInstruction(n, "import")
-		if !ok {
-			continue
-		}
-
-		switch instr.Len() {
-		case 2:
-			expr := instr.At(1).(*parser.List)
-			switch expr.Len() {
-			case 1:
-				if expr.At(0).Type() != parser.String {
-					return NewError(expr.At(0).Position(), "invalid import path; expected string")
-				}
-
-				// create an alias from the last portion of the path.
-				// e.g.: "path/to/thing" -> "thing"
-				path := expr.At(0).(*parser.Value).Value
-				_, alias := filepath.Split(path)
-				alias = strings.ToLower(alias)
-				aliases[alias] = path
-
-			default:
-				return NewError(expr.Position(), "import statement must have either one or two operands; did you forget a comma?")
-			}
-
-		case 3:
-			expr := instr.At(1).(*parser.List)
-			if expr.At(0).Type() != parser.Ident {
-				return NewError(expr.At(0).Position(), "invalid import alias; expected ident")
-			}
-
-			alias := expr.At(0).(*parser.Value).Value
-			alias = strings.ToLower(alias)
-
-			expr = instr.At(2).(*parser.List)
-			if expr.At(0).Type() != parser.String {
-				return NewError(expr.At(0).Position(), "invalid import path; expected string")
-			}
-
-			path := expr.At(0).(*parser.Value).Value
-			aliases[alias] = path
-
-		default:
-			return NewError(instr.Position(), "import statement must have either one or two operands")
-		}
-
-		nodes.Remove(i)
-		i--
-	}
-	return nil
-}
-
-// isInstruction returns true if n is an instruction with the given name.
-// If true, returns n as a List.
-func isInstruction(n parser.Node, name string) (*parser.List, bool) {
-	if n.Type() != parser.Instruction {
-		return nil, false
-	}
-	instr := n.(*parser.List)
-	return instr, isIdent(instr.At(0), name)
 }
 
 // isIdent returns true if n is an Ident with the given value.

@@ -1,0 +1,23 @@
+:sprdi {
+    :Device d16 $0
+   
+    const Manufacturer = 16#fffe
+    const Serial       = 16#0002
+
+    ; Interrupt ids.
+    const PaletteSize          = 16
+    const SpriteBufferSize     = 256
+    const SpriteSize           = 32
+
+    ; List of supported interrupt operations.
+    const SetBackgroundPalette = 0
+    const SetForegroundPalette = 1
+    const SetBackgroundSprites = 2
+    const SetForegroundSprites = 3
+    const DrawBackground       = 4
+    const DrawForeground       = 5
+    const ClearBackground      = 6
+    const ClearForeground      = 7
+    const Swap                 = 8
+
+}

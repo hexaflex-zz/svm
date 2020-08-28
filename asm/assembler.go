@@ -2,7 +2,6 @@ package asm
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -34,7 +33,7 @@ func newAssembler(debug bool) *assembler {
 
 // assemble compiles the given source AST into an archive.
 // Any provided options dictate custom assembler behaviour.
-func (a *assembler) assemble(ast *parser.AST, module string) (*ar.Archive, error) {
+func (a *assembler) assemble(ast *parser.AST) (*ar.Archive, error) {
 	if err := syntax.Verify(ast); err != nil {
 		return nil, err
 	}
@@ -51,7 +50,7 @@ func (a *assembler) assemble(ast *parser.AST, module string) (*ar.Archive, error
 		return nil, err
 	}
 
-	if err := a.resolveEntrypoint(ast.Nodes(), module); err != nil {
+	if err := a.resolveEntrypoint(ast.Nodes()); err != nil {
 		return nil, err
 	}
 
@@ -71,11 +70,11 @@ func (a *assembler) assemble(ast *parser.AST, module string) (*ar.Archive, error
 //
 // If the entrypoint is not 0, it creates a new JMP instruction which is
 // located at the very beginning of the program and jumps to the entrypoint.
-func (a *assembler) resolveEntrypoint(nodes *parser.List, module string) error {
-	name := parser.Scope(module).Join("main").String()
-	addr, ok := a.symbols[name]
+func (a *assembler) resolveEntrypoint(nodes *parser.List) error {
+	const Name = "main"
+	addr, ok := a.symbols[Name]
 	if !ok {
-		return fmt.Errorf("missing entrypoint in program; expected to find %q", name)
+		return fmt.Errorf("missing entrypoint in program; expected to find %q", Name)
 	}
 
 	if addr == 0 {
@@ -87,7 +86,7 @@ func (a *assembler) resolveEntrypoint(nodes *parser.List, module string) error {
 
 	expr := parser.NewList(pos, parser.Expression)
 	expr.Append(parser.NewValue(pos, parser.AddressMode, "$"))
-	expr.Append(parser.NewValue(pos, parser.Ident, name))
+	expr.Append(parser.NewValue(pos, parser.Ident, Name))
 
 	instr := parser.NewList(pos, parser.Instruction)
 	instr.Append(parser.NewValue(pos, parser.Ident, "jmp"), expr)
@@ -171,30 +170,15 @@ func (a *assembler) evaluateInstructions(nodes *parser.List, scope parser.Scope)
 	})
 }
 
-//isExternalReference returns true if name represents a reference to an external module.
-func isExternalReference(name string) bool {
-	alias, _ := filepath.Split(name)
-	return len(alias) > 0
-}
-
-// resolveReference finds the address or value for a given external reference.
-// This can be a label or constant. Optionally searches for a scope-local match first.
-// Returns an error if it can't be found.
+// resolveReference finds the address or value for a given reference. This can be a label or constant.
+// This will traverse the scope tree upward until a match is found.
+// Returns an erro if no match is found.
 func (a *assembler) resolveReference(scope parser.Scope, name string) (int, error) {
 	if name == "$$" {
 		return a.address, nil
 	}
 
-	// Is this an external reference? No need to do the scope tree search.
-	if isExternalReference(name) {
-		key := strings.ToLower(name)
-		if addr, ok := a.symbols[key]; ok {
-			return addr, nil
-		}
-		return 0, fmt.Errorf("reference to unresolved value %s", name)
-	}
-
-	// Look for the entry in the scope tree.
+	// Check if the entry exists in the current scope.
 	key := scope.Join(name).String()
 	key = strings.ToLower(key)
 
@@ -202,6 +186,7 @@ func (a *assembler) resolveReference(scope parser.Scope, name string) (int, erro
 		return addr, nil
 	}
 
+	// If not, traverse the scope tree upwards and search.
 	for len(scope) > 0 {
 		scope, _ = scope.Split()
 

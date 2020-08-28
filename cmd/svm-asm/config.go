@@ -4,16 +4,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Config defines program configuration.
 type Config struct {
-	ImportRoot  string // Root path with module and program sources.
-	Program     string // Import path for the program to build.
-	Output      string // Path to store output in. Filepath or empty for stdout.
-	DebugBuild  bool   // Include debug symbols in build?
-	DumpAST     bool   // Print a human-readable dump of the unprocessed AST.
-	DumpArchive bool   // Print a human-readable dump of the compiled archive and exit.
+	Includes    []string // Include search paths.
+	Input       string   // Input source file to build.
+	Output      string   // Path to store output in.
+	DebugBuild  bool     // Include debug symbols in build?
+	DumpAST     bool     // Print a human-readable dump of the unprocessed AST.
+	DumpArchive bool     // Print a human-readable dump of the compiled archive and exit.
 }
 
 // parseArgs parses command line arguments as applicable.
@@ -22,13 +23,14 @@ type Config struct {
 // When version information is requested, it is printed to stdout and the program ends cleanly.
 func parseArgs() *Config {
 	var c Config
+	c.Output = "out.a"
 
 	flag.Usage = func() {
-		fmt.Printf("%s [options] <target import path>\n", os.Args[0])
+		fmt.Printf("%s [options] <input source file>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
-	flag.StringVar(&c.ImportRoot, "import", c.ImportRoot, "Root directory for all source code.")
+	includes := flag.String("include", "", "Colon-separated list of include search paths.")
 	flag.StringVar(&c.Output, "out", c.Output, "Output file.")
 	flag.BoolVar(&c.DebugBuild, "debug", c.DebugBuild, "Include debug symbols in the build. Creates an extra <out>.dbg file as output.")
 	flag.BoolVar(&c.DumpAST, "dump-ast", c.DumpAST, "Print a human-readable version of the unprocessed AST to stdout.")
@@ -46,6 +48,23 @@ func parseArgs() *Config {
 		os.Exit(1)
 	}
 
-	c.Program = flag.Arg(0)
+	if len(*includes) > 0 {
+		c.Includes = filteredSplit(*includes, ":")
+	}
+
+	c.Input = flag.Arg(0)
 	return &c
+}
+
+// filteredSplit splits value by sep and returns the resulting list, minus empty entries.
+func filteredSplit(value, sep string) []string {
+	out := strings.Split(value, sep)
+	for i := 0; i < len(out); i++ {
+		out[i] = strings.TrimSpace(out[i])
+		if len(out[i]) == 0 {
+			copy(out[i:], out[i+1:])
+			out = out[:len(out)-1]
+		}
+	}
+	return out
 }

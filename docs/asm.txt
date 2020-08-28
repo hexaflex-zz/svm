@@ -2,39 +2,7 @@
  Assembler & Language
 ===============================================================================
 
- Document rev.: 23
-
-
-===============================================================================
- Modules and Import paths
-===============================================================================
-
- The basic building block of a program is a module. Each module has a unique
- name and import path. This path is the directory in which its source files are
- located, relative to the source root directory provided to the assembler.
-
- The module name is the last directory of the import path and is the name by
- which a module is referenced in code when addressing a specific symbol in
- that module. E.g.:
-
-     import "path/to/mymodule"
-
-     add r0, mymodule.foo
-
- The import statement can accept an alias to use as a name instead of the
- actual module name. This allows one to import multiple modules which happen
- to have the same name. E.g.: 
- 
-     import first, "path/to/first/somemodule"
-     import second, "path/to/second/somemodule"
-
-     add r0, first.foo
-     add r1, second.foo
-
- The assembler is invoked with the module's import path. It will automatically
- collate all source files in the specified directory and considers them part
- of the same module. Source files are expected to have the extension .svm
- or .asm
+ Document rev.: 25
 
 
 ===============================================================================
@@ -158,7 +126,8 @@
  when being referenced.
  
  Similarly, a local symbol can not be referenced from outside of the scope
- in which it is defined.
+ in which it is defined, unless the scope has a name. This will be covered
+ later.
 
  Scope blocks can occur anywhere and can be nested.
 
@@ -177,6 +146,19 @@
     mov r0, $foo                      ; r0 = 123
     mov r1, $quux                     ; Error - quux is defined in a child
                                       ; scope and is not available here.
+
+
+Scope blocks can have names. This allows a scope to be accessible from the
+outside. A name is provided simply by immediately preceeding the scope block
+with a label.
+
+   :myscope {
+      const foo = 123
+      mov r0, $foo                    ; r0 = 123
+   }
+
+   mov r0, $foo                       ; Error - foo is defined in a child scope.
+   mov r0, $myscope.foo               ; r0 = 123
 
 
 ===============================================================================
@@ -210,43 +192,44 @@
  by the assembler to make programming a little easier.
 
   Directive             | Description
- =======================|===========================================================
+ =======================|======================================================
   $$                    | This is a special constant which always refers to the
                         | address of the current instruction. It can be used to
                         | refer to relative memory offsets. It is valid in any
                         | operand expression.
- -----------------------|-----------------------------------------------------------
+ -----------------------|------------------------------------------------------
   address x             | Tells the assembler to emit the next instructions at
-                        | address x and onwards. This allows the programmer to skip
-                        | arbitrary chunks of memory or overwrite existing code,
-                        | so use with care.
- -----------------------|-----------------------------------------------------------
-  import alias, path    | Imports a given compiled module. The alias is the name by
-                        | which symbols in this module are referenced. If the alias
-                        | is omitted, it defaults to the last component in the path.
-                        | E.g.: `import "path/to/module" -> "module"
- -----------------------|-----------------------------------------------------------
-  const x = y           | Defines a constant x to match expression y. The assembler
-                        | will replace any occurrence of x in the source code, with
-                        | the expression y.
- -----------------------|-----------------------------------------------------------
+                        | address x and onwards. This allows the programmer to
+                        | skip arbitrary chunks of memory or overwrite existing
+                        | code, so use with care.
+ -----------------------|------------------------------------------------------
+  include path          | Includes the source from a given file in-place. This
+                        | replaces the include node with the file contents. The
+                        | path is expected to be relative to the current file
+                        | and if not found there, relative to the include root
+                        | directory.
+ -----------------------|------------------------------------------------------
+  const x = y           | Defines a constant x to match expression y. The
+                        | assembler will replace any occurrence of x in the
+                        | source code, with the expression y.
+ -----------------------|------------------------------------------------------
   d8  args              | Writes raw 8-bit operand values into the program.
   d16 args              | Writes raw 16-bit operand values into the program.
   d32 args              | Writes raw 32-bit operand values into the program.
   d64 args              | Writes raw 64-bit operand values into the program.
- -----------------------|-----------------------------------------------------------
+ -----------------------|------------------------------------------------------
   reserve x             | Reserves x number of bytes without assigning any
                         | values to it.
- -----------------------|-----------------------------------------------------------
-  macro name args       | Begins a macro definition with the given name and optional
-                        | list of operand names. Refer to the Macros section for
-                        | more information.
+ -----------------------|------------------------------------------------------
+  macro name args       | Begins a macro definition with the given name and
+                        | optional list of operand names. Refer to the Macros
+                        | section for more information.
   endmacro              | Ends a macro definition.
- -----------------------|-----------------------------------------------------------
-  break                 | Inserts a breakpoint at the current address. If run in
-                        | debug mode by the VM, this will pause execution and allows
-                        | inspection of memory and registers etc.
- -----------------------|-----------------------------------------------------------
+ -----------------------|------------------------------------------------------
+  break                 | Inserts a breakpoint at the current address. If run
+                        | in debug mode by the VM, this will pause execution
+                        | and allows inspection of memory and registers etc.
+ -----------------------|------------------------------------------------------
 
 
 ================================================================================

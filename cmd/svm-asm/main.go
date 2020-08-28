@@ -28,7 +28,7 @@ func main() {
 // dumpArchive builds the final bnary archive and prints a human readable version of it
 // to the requested output.
 func dumpArchive(c *Config) {
-	ar, err := asm.Build(c.ImportRoot, c.Program, c.DebugBuild)
+	ar, err := asm.Build(c.Input, c.Includes, c.DebugBuild)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -40,7 +40,7 @@ func dumpArchive(c *Config) {
 // dumpAST loads the source AST and writes a human readable version of it to the
 // requested output.
 func dumpAST(c *Config) {
-	ast, err := asm.BuildAST(c.ImportRoot, c.Program)
+	ast, err := asm.BuildAST(c.Input, c.Includes)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -51,7 +51,7 @@ func dumpAST(c *Config) {
 
 // buildBinary builds a binary program and writes it to the requested output location.
 func buildBinary(c *Config) *ar.Archive {
-	ar, err := asm.Build(c.ImportRoot, c.Program, c.DebugBuild)
+	ar, err := asm.Build(c.Input, c.Includes, c.DebugBuild)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

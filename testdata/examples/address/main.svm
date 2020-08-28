@@ -1,5 +1,5 @@
 ;
-; svm-asm -import testdata -out testdata/test.a -debug examples/address
+; svm-asm -out testdata/test.a -debug examples/address/main.svm
 ; svm-fdd -out testdata/test.img testdata/test.a
 ; svm -debug testdata/test.img
 ; 

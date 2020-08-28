@@ -1,3 +1,8 @@
+;
+; svm-asm -out testdata/test.a -debug examples/reserved/main.svm
+; svm-fdd -out testdata/test.img testdata/test.a
+; svm -debug testdata/test.img
+;
 
 :main {
     mov r0, foo
