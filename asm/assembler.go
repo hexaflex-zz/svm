@@ -729,8 +729,17 @@ func isAddrDirective(n parser.Node, address int) (int, bool) {
 		return 0, false
 	}
 
+	var num *parser.Value
+
 	expr := instr.At(1).(*parser.List)
-	num := expr.At(1).(*parser.Value)
+	if expr.Len() == 1 {
+		// No address mode marker.
+		// Technically not correct, but eh, who cares.
+		num = expr.At(0).(*parser.Value)
+	} else {
+		num = expr.At(1).(*parser.Value)
+	}
+
 	x, _ := parser.ParseNumber(num.Value)
 	return int(x) - address, true
 }
