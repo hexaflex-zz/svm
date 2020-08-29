@@ -1,0 +1,18 @@
+:sprdi {
+    const Manufacturer = 16#fffe
+    const Serial       = 16#0002
+
+    ; Display properties.
+    const DisplayWidth         = 256
+    const DisplayHeight        = 240
+    const PaletteSize          = 16
+    const SpriteBufferSize     = 256
+    const SpritePixelSize      = 8
+
+    ; List of supported interrupt operations.
+    const SetPalette = 0
+    const SetSprites = 1
+    const Draw       = 2
+    const Clear      = 3
+    const Swap       = 4
+}

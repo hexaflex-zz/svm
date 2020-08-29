@@ -1,6 +1,4 @@
 :gp14 {
-    :Device d16 $0
-
     const Manufacturer = 16#fffe
     const Serial       = 16#0003
 
@@ -26,18 +24,18 @@
     const ButtonLeft        = 14
 
     ; JmpOnJustPressed jumps to the given address if the specified key was just pressed.
-    macro JmpOnJustPressed button, address
+    macro JmpOnJustPressed device, button, address
         mov r0, $IsJustPressed
         mov r1, button
-        int gp14.Device
+        int device
         jnz address
     endmacro
 
     ; CallOnJustPressed calls the given subroutine if the specified key was just pressed.
-    macro CallOnJustPressed button, subroutine
+    macro CallOnJustPressed device, button, subroutine
         mov  r0, $IsJustPressed
         mov  r1, button
-        int  gp14.Device
+        int  device
         clnz subroutine
     endmacro
 }

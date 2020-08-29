@@ -4,21 +4,21 @@
 ; svm -debug testdata/test.img
 ; 
 
-include "sys/clock.svm"
+include "stdlib/clock.svm"
 
 :main {
     mov ria, $intHandler                                                       ; Define a new hardware interrupt handler.
 
-    hwa clock.Device, $16#fffe, $16#0005                                       ; Find the clock device index.
+    hwa devices.clock, $16#fffe, $16#0005                                      ; Find the clock device index.
     jez $exit
 
     mov r0, $clock.SetIntID                                                    ; Give clock a new, non-zero id.
-    add r1, clock.Device, $1
-    int clock.Device
+    add r1, devices.clock, $1
+    int devices.clock
 
     mov r0, $clock.SetTimer                                                    ; Start a new 1-second timer.
     mov r1, $1000
-    int clock.Device
+    int devices.clock
 
 :loop
     wait $500
@@ -39,4 +39,9 @@ include "sys/clock.svm"
 
     pop r0                                                                     ; Be sure to restore R0 when exiting interrupt handler.
     ret                                                                        ; CPU doesn't do this for you!
+}
+
+; device indices, used in INT instructions.
+:devices {
+    :clock d16 $0
 }

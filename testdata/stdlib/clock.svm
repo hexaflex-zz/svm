@@ -1,6 +1,4 @@
 :clock {
-    :Device d16 $0
-
     const Manufacturer = 16#fffe
     const Serial       = 16#0005
 

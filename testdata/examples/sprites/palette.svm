@@ -1,7 +1,23 @@
 
-; palette from: http://pixeljoint.com/forum/forum_posts.asp?TID=12795
+;------------------------------------------------------------------------------
+; recolor changes the last color in the background palette to a random value.
+; This is the color used by our font sprites.
+;------------------------------------------------------------------------------
+:recolor {
+    rng8 palette+45, $0, $255                                                   ; Set the last palette color to something random.
+    rng8 palette+46, $0, $255
+    rng8 palette+47, $0, $255
+    mov  r0, $sprdi.SetPalette                                                  ; reload color palette.
+    mov  r1, $palette
+    int  devices.sprdi
+    ret
+}
+
+;------------------------------------------------------------------------------
+; Custom color palette from: http://pixeljoint.com/forum/forum_posts.asp?TID=12795
+;------------------------------------------------------------------------------
 :palette
-    d8 $20, $12, $28        ; this one is always transparent
+    d8 $0, $0, $0                                                              ; this one is always transparent
     d8 $68, $36, $52
     d8 $48, $52, $109
     d8 $78, $74, $78

@@ -1,0 +1,9 @@
+
+; sys defines memory and system related constants.
+:sys {
+    const WordSize          = 2
+    const MemoryCapacity    = 16#10000
+    const StackframeSize    = WordSize
+    const CallstackLength   = 16
+    const CallstackCapacity = StackframeSize * CallstackLength
+}

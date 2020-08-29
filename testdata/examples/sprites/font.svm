@@ -7,7 +7,7 @@
     ; SpriteCount defines the number of sprites in the font.
     const SpriteCount = 94
 
-    :Sprites
+    :sprites
     d32 $16#000ff000
     d32 $16#000ff000
     d32 $16#000ff000

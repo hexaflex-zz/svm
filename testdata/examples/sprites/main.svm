@@ -4,10 +4,10 @@
 ; svm -debug testdata/test.img
 ;
 
-include "sys/fd35.svm"
-include "sys/sprdi.svm"
-include "sys/gp14.svm"
-include "sys/clock.svm"
+include "stdlib/fd35.svm"
+include "stdlib/sprdi.svm"
+include "stdlib/gp14.svm"
+include "stdlib/clock.svm"
 
 ;------------------------------------------------------------------------------
 ; Program entrypoint.
@@ -16,11 +16,11 @@ include "sys/clock.svm"
     call $setup
 
 :loop
-    gp14.JmpOnJustPressed $gp14.ButtonBack, $exit                              ; Exit the program if ButtonBack is pressed.
-    gp14.CallOnJustPressed $gp14.ButtonA, $recolor                             ; Set text color to something random iff ButtonA was pressed.
+    gp14.JmpOnJustPressed devices.gp14, $gp14.ButtonBack, $exit                ; Exit the program if ButtonBack is pressed.
+    gp14.CallOnJustPressed devices.gp14, $gp14.ButtonA, $recolor               ; Set text color to something random iff ButtonA was pressed.
 
     mov r0, $sprdi.Swap                                                        ; Present backbuffer.
-    int sprdi.Device
+    int devices.sprdi
     jmp $loop
 
 :exit
@@ -28,68 +28,68 @@ include "sys/clock.svm"
 }
 
 ;------------------------------------------------------------------------------
-; setup initializes various devices properties.
+; setup initializes hardware and memory where needed.
 ;------------------------------------------------------------------------------
 :setup {
-    hwa fd35.Device, $fd35.Manufacturer, $fd35.Serial                          ; Find the device index for the floppy disk drive.
-    jez $deviceNotFound
+    hwa devices.fd35, $fd35.Manufacturer, $fd35.Serial                         ; Find the device index for the floppy disk drive.
+    hwa devices.sprdi, $sprdi.Manufacturer, $sprdi.Serial                      ; Find the device index for the display.
+    hwa devices.gp14, $gp14.Manufacturer, $gp14.Serial                         ; Find the device index for the gamepad.
 
-    hwa sprdi.Device, $sprdi.Manufacturer, $sprdi.Serial                       ; Find the device index for the display.
-    jez $deviceNotFound
+    fd35.SyncReadSector devices.fd35, $(1 * fd35.SectorByteSize), $1           ; Load extra sectors into memory. We are currently lacking some font sprites.
+    fd35.SyncReadSector devices.fd35, $(2 * fd35.SectorByteSize), $2
+    fd35.SyncReadSector devices.fd35, $(3 * fd35.SectorByteSize), $3
+    fd35.SyncReadSector devices.fd35, $(4 * fd35.SectorByteSize), $4
 
-    hwa gp14.Device, $gp14.Manufacturer, $gp14.Serial                          ; Find the device index for the gamepad.
-    jez $deviceNotFound
-
-    hwa clock.Device, $clock.Manufacturer, $clock.Serial                       ; Find the device index for the clock.
-    jez $deviceNotFound
-
-    fd35.SyncReadSector $(1 * fd35.SectorByteSize), $1                         ; Load extra sectors into memory. We are currently lacking some font sprites.
-    fd35.SyncReadSector $(2 * fd35.SectorByteSize), $2
-    fd35.SyncReadSector $(3 * fd35.SectorByteSize), $3
-    fd35.SyncReadSector $(4 * fd35.SectorByteSize), $4
-
-    mov r0, $sprdi.SetBackgroundPalette                                        ; Load custom background color palette.
+    mov r0, $sprdi.SetPalette                                                  ; Load custom color palette.
     mov r1, $palette
-    int sprdi.Device
+    int devices.sprdi
 
-    mov r0, $sprdi.SetBackgroundSprites                                        ; Load our font. Text sprites are loaded into the background for
-    mov r1, $font.Sprites                                                      ; this example, so we don't have to handle per-sprite positioning.
-    mov r2, $font.ASCIIOffset                                                  ; They are aligned to a 2D grid.
+break
+    mov r0, $sprdi.SetSprites                                                  ; Load our font.
+    mov r1, $font.sprites
+    mov r2, $font.ASCIIOffset
     mov r3, $font.SpriteCount
-    int sprdi.Device
+    int devices.sprdi
 
-    mov r0, $sprdi.DrawBackground                                              ; Display text at center of display.
-    mov r1, $str_helloWorld
-    mov r2, $(14 * 32 + 10)
-    mov r3, $len_helloWorld
-    int sprdi.Device
-    ret
-
-:deviceNotFound
-    halt
-}
-
-
-;------------------------------------------------------------------------------
-; recolor changes the last color in the background palette to a random value.
-; This is the color used by our font sprites.
-;------------------------------------------------------------------------------
-:recolor {
-    rng8 palette+45, $0, $16#ff                                                 ; Set the last palette color to something random.
-    rng8 palette+46, $0, $16#ff
-    rng8 palette+47, $0, $16#ff
-    mov  r0, $sprdi.SetBackgroundPalette                                        ; reload background color palette.
-    mov  r1, $palette
-    int  sprdi.Device
+    mov r0, $sprdi.Draw                                                        ; Draw text to display buffer.
+    mov r1, $str_helloWorld.data
+    mov r2, $str_helloWorld.len
+    int devices.sprdi
     ret
 }
 
 ;------------------------------------------------------------------------------
-; Variables & embedded data
+; Device indices - used in INT instructions.
 ;------------------------------------------------------------------------------
-const len_helloWorld = 13
-:str_helloWorld
-    d8 $"Hello, world!"
+:devices {
+    :gp14  d16 $0
+    :sprdi d16 $0
+    :fd35  d16 $0
+}
+
+;------------------------------------------------------------------------------
+; str_helloWorld defines string sprite descriptors, with their positions
+; preset to put the string in the center of the display.
+;------------------------------------------------------------------------------
+:str_helloWorld {
+    const len = 13
+    const _w = sprdi.SpritePixelSize
+    const _x = (sprdi.DisplayWidth / 2) - ((_w*len) / 2)
+    const _y = (sprdi.DisplayHeight / 2) - (_w / 2)
+    :data d8 $'H',  $_x        ,   $_y
+          d8 $'e',  $_x + $_w  ,   $_y
+          d8 $'l',  $_x + $_w*2,   $_y
+          d8 $'l',  $_x + $_w*3,   $_y
+          d8 $'o',  $_x + $_w*4,   $_y
+          d8 $',',  $_x + $_w*5,   $_y
+          d8 $' ',  $_x + $_w*6,   $_y
+          d8 $'w',  $_x + $_w*7,   $_y
+          d8 $'o',  $_x + $_w*8,   $_y
+          d8 $'r',  $_x + $_w*9,   $_y
+          d8 $'l',  $_x + $_w*10,  $_y
+          d8 $'d',  $_x + $_w*11,  $_y
+          d8 $'!',  $_x + $_w*12,  $_y
+}
 
 include "palette.svm"
 include "font.svm"
