@@ -3,7 +3,6 @@ package asm
 import (
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/hexaflex/svm/arch"
 	"github.com/hexaflex/svm/asm/ar"
@@ -285,7 +284,7 @@ func replaceMacroContents(body, values []parser.Node, names []*parser.Value) {
 			expr := instr.At(j).(*parser.List)
 			for k := 0; k < expr.Len(); k++ {
 				x := indexOfIdent(names, expr.At(k))
-				if x == -1 {
+				if x == -1 || x >= len(values) {
 					continue
 				}
 
@@ -350,7 +349,6 @@ func (a *assembler) resolveLabels(nodes *parser.List, scope parser.Scope) error 
 		}
 
 		a.symbols[strings.ToLower(lbl.Value)] = a.address
-
 		nodes.Remove(i)
 		i--
 	}
@@ -572,7 +570,7 @@ func encodedLen(n parser.Node, address int) int {
 	}
 
 	if size, ok := isDataDirective(n); ok {
-		return dataDirectiveLen(n.(*parser.List), size)
+		return (n.(*parser.List).Len() - 1) * size
 	}
 
 	if n.Type() != parser.Instruction {
@@ -607,29 +605,6 @@ func encodedExprLen(expr *parser.List) int {
 		}
 	}
 	return 3
-}
-
-// dataDirectiveLen computes the encoded length for the given data directive.
-func dataDirectiveLen(instr *parser.List, bytesize int) int {
-	var size int
-
-	for i := 1; i < instr.Len(); i++ {
-		expr := instr.At(i).(*parser.List)
-
-		expr.Each(func(_ int, n parser.Node) error {
-			switch {
-			case n.Type() == parser.AddressMode:
-				/* nop */
-			case n.Type() == parser.String:
-				size += utf8.RuneCountInString(n.(*parser.Value).Value) * bytesize
-			default:
-				size += bytesize
-			}
-			return nil
-		})
-	}
-
-	return size
 }
 
 // isDataDirective returns true if n represents a data directive.
