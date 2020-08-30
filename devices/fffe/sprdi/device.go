@@ -2,8 +2,8 @@
 package sprdi
 
 import (
+	"fmt"
 	"log"
-	"unsafe"
 
 	"github.com/go-gl/gl/v4.2-core/gl"
 	"github.com/pkg/errors"
@@ -14,14 +14,10 @@ import (
 
 // Known interrupt operations.
 const (
-	setBackgroundPalette = iota
-	setForegroundPalette
-	setBackgroundSprites
-	setForegroundSprites
-	drawBackground
-	drawForeground
-	clearBackground
-	clearForeground
+	setPalette = iota
+	setSprites
+	draw
+	clear
 	swap
 )
 
@@ -36,28 +32,19 @@ const (
 	internalSpriteByteSize = SpriteByteSize * 2 // Size of sprite data in internal device memory: 8bpp.
 )
 
-// The number of tiles in each background dimension.
-const (
-	HorizontalTileCount = DisplayWidth / SpritePixelSize
-	VerticalTileCount   = DisplayHeight / SpritePixelSize
-)
-
 // Device defines all internal doodads for the display.
 type Device struct {
-	palette         [PaletteSize * 2 * 4]float32
-	sprites         [BufferSize * 2 * SpritePixelSize * SpritePixelSize]byte
-	background      [DisplayWidth * DisplayHeight]byte
-	foreground      [DisplayWidth * DisplayHeight]byte
-	empty           [DisplayWidth * DisplayHeight]byte
-	shader          uint32
-	vao             uint32
-	vbo             uint32
-	backgroundTex   uint32
-	foregroundTex   uint32
-	paletteDirty    bool
-	backgroundDirty bool
-	foregroundDirty bool
-	initialized     bool
+	palette      [PaletteSize * 4]float32
+	sprites      [BufferSize * SpritePixelSize * SpritePixelSize]byte
+	scene        [DisplayWidth * DisplayHeight]byte
+	empty        [DisplayWidth * DisplayHeight]byte
+	shader       uint32
+	vao          uint32
+	vbo          uint32
+	sceneTex     uint32
+	paletteDirty bool
+	sceneDirty   bool
+	initialized  bool
 }
 
 var _ devices.Device = &Device{}
@@ -77,10 +64,7 @@ func (d *Device) Draw() {
 	gl.BindVertexArray(d.vao)
 
 	gl.ActiveTexture(gl.TEXTURE0)
-	gl.BindTexture(gl.TEXTURE_2D, d.backgroundTex)
-
-	gl.ActiveTexture(gl.TEXTURE1)
-	gl.BindTexture(gl.TEXTURE_2D, d.foregroundTex)
+	gl.BindTexture(gl.TEXTURE_2D, d.sceneTex)
 
 	gl.DrawArrays(gl.TRIANGLES, 0, 6)
 }
@@ -118,12 +102,10 @@ func (d *Device) Startup(devices.IntFunc) error {
 	gl.EnableVertexAttribArray(texCoordAttrib)
 	gl.VertexAttribPointer(texCoordAttrib, 2, gl.FLOAT, false, 5*4, gl.PtrOffset(3*4))
 
-	d.backgroundTex = makeTexture()
-	d.foregroundTex = makeTexture()
+	d.sceneTex = makeTexture()
 
 	d.paletteDirty = true
-	d.backgroundDirty = true
-	d.foregroundDirty = true
+	d.sceneDirty = true
 	d.initialized = true
 	d.swap()
 	return nil
@@ -132,8 +114,7 @@ func (d *Device) Startup(devices.IntFunc) error {
 // Shutdown clears up device resources.
 func (d *Device) Shutdown() error {
 	d.initialized = false
-	gl.DeleteTextures(1, &d.foregroundTex)
-	gl.DeleteTextures(1, &d.backgroundTex)
+	gl.DeleteTextures(1, &d.sceneTex)
 	gl.DeleteBuffers(1, &d.vbo)
 	gl.DeleteVertexArrays(1, &d.vao)
 	gl.DeleteProgram(d.shader)
@@ -143,22 +124,14 @@ func (d *Device) Shutdown() error {
 // Int triggers an interrupt on the device. The device can read from- and write to system memory.
 func (d *Device) Int(mem devices.Memory) {
 	switch mem.U16(cpu.R0) {
-	case setBackgroundPalette:
-		d.setBackgroundPalette(mem)
-	case setForegroundPalette:
-		d.setForegroundPalette(mem)
-	case setBackgroundSprites:
-		d.setBackgroundSprites(mem)
-	case setForegroundSprites:
-		d.setForegroundSprites(mem)
-	case drawBackground:
-		d.drawBackground(mem)
-	case drawForeground:
-		d.drawForeground(mem)
-	case clearBackground:
-		d.clearBackground()
-	case clearForeground:
-		d.clearForeground()
+	case setPalette:
+		d.setPalette(mem)
+	case setSprites:
+		d.setSprites(mem)
+	case draw:
+		d.draw(mem)
+	case clear:
+		d.clear()
 	case swap:
 		d.swap()
 	}
@@ -168,131 +141,80 @@ func (d *Device) swap() {
 	if d.paletteDirty {
 		gl.UseProgram(d.shader)
 		palette := gl.GetUniformLocation(d.shader, glStr("palette"))
-		gl.Uniform4fv(palette, 32, &d.palette[0])
+		gl.Uniform4fv(palette, 16, &d.palette[0])
 		d.paletteDirty = false
 	}
 
-	if d.backgroundDirty {
-		uploadTexture(d.backgroundTex, gl.RED, DisplayWidth, DisplayHeight, gl.RED, gl.UNSIGNED_BYTE, d.background[:])
-		d.backgroundDirty = false
-	}
-
-	if d.foregroundDirty {
-		uploadTexture(d.foregroundTex, gl.RED, DisplayWidth, DisplayHeight, gl.RED, gl.UNSIGNED_BYTE, d.foreground[:])
-		d.foregroundDirty = false
+	if d.sceneDirty {
+		uploadTexture(d.sceneTex, gl.RED, DisplayWidth, DisplayHeight, gl.RED, gl.UNSIGNED_BYTE, d.scene[:])
+		d.sceneDirty = false
 	}
 }
 
-func (d *Device) drawBackground(mem devices.Memory) {
-	srcAddr := mem.U16(cpu.R1)
-	dstAddr := mem.U16(cpu.R2)
-	count := mem.U16(cpu.R3)
-	bg := d.background[:]
-
-	dx := dstAddr % HorizontalTileCount
-	dy := dstAddr / HorizontalTileCount
-	dstAddr = dy*DisplayWidth*SpritePixelSize + dx*SpritePixelSize
-
-	for i := 0; i < count; i++ {
-		d.drawSprite(bg, dstAddr, mem.U8(srcAddr), true)
-		dstAddr += 8
-		srcAddr += 1
-	}
-
-	d.backgroundDirty = true
-}
-
-func (d *Device) drawForeground(mem devices.Memory) {
+func (d *Device) draw(mem devices.Memory) {
 	srcAddr := mem.U16(cpu.R1)
 	count := mem.U16(cpu.R2)
-	fg := d.foreground[:]
 
 	for i := 0; i < count; i++ {
-		s := mem.U8(srcAddr + 0)
+		n := mem.U8(srcAddr + 0)
 		x := mem.U8(srcAddr + 1)
 		y := mem.U8(srcAddr + 2)
-		d.drawSprite(fg, y*DisplayWidth+x, s, false)
+		d.drawSprite(x, y, n)
 		srcAddr += 3
 	}
 
-	d.foregroundDirty = true
+	d.sceneDirty = true
 }
 
-// drawSprite draws sprite n to the specified buffer at the given address.
-func (d *Device) drawSprite(dst []byte, dstAddr, n int, isBackground bool) {
+// drawSprite draws sprite n to the scene buffer at the given address.
+func (d *Device) drawSprite(x, y, n int) {
 	src := d.sprites[n*internalSpriteByteSize:]
+	dst := d.scene[:]
+	dstAddr := y*DisplayWidth + x
 
-	if isBackground {
-		// 'fast' lane for background sprites.
-		for y := 0; y < SpritePixelSize; y++ {
-			dy := dstAddr + y*DisplayWidth
-			sy := y * SpritePixelSize
-			copy(dst[dy:], src[sy:sy+SpritePixelSize])
-		}
-	} else {
-		// Foreground sprites should refer to color indices in the upper half of the color palette.
-		// Each pixel in a foreground sprite must therefore be offset by the appropriate size.
-		//
-		// Instead of adding the palette offset to each sprite pixel individually, we create an 8-byte
-		// wide mask that just repeats the offset 8 times. Once for each pixel in a sprite row. We then
-		// OR the mask with each row in one go.
-		const PaletteSizeRow = PaletteSize<<56 | PaletteSize<<48 | PaletteSize<<40 | PaletteSize<<32 |
-			PaletteSize<<24 | PaletteSize<<16 | PaletteSize<<8 | PaletteSize
-
-		for y := 0; y < SpritePixelSize; y++ {
-			dy := dstAddr + y*DisplayWidth
-			sy := y * SpritePixelSize
-			copy(dst[dy:], src[sy:sy+SpritePixelSize])
-			*(*uint64)(unsafe.Pointer(&dst[dy:][0])) |= PaletteSizeRow
-		}
+	for y := 0; y < SpritePixelSize; y++ {
+		dy := dstAddr + y*DisplayWidth
+		sy := y * SpritePixelSize
+		copy(dst[dy:], src[sy:sy+SpritePixelSize])
 	}
 }
 
-func (d *Device) clearBackground() {
-	copy(d.background[:], d.empty[:])
-	d.backgroundDirty = true
+func (d *Device) clear() {
+	copy(d.scene[:], d.empty[:])
+	d.sceneDirty = true
 }
 
-func (d *Device) clearForeground() {
-	copy(d.foreground[:], d.empty[:])
-	d.foregroundDirty = true
-}
-
-func (d *Device) setBackgroundSprites(mem devices.Memory) {
+func (d *Device) setSprites(mem devices.Memory) {
 	address := mem.U16(cpu.R1)
 	index := mem.U16(cpu.R2)
 	count := mem.U16(cpu.R3)
-	d.setSprites(mem, address, index, count)
-}
 
-func (d *Device) setForegroundSprites(mem devices.Memory) {
-	address := mem.U16(cpu.R1)
-	index := BufferSize + mem.U16(cpu.R2)
-	count := mem.U16(cpu.R3)
-	d.setSprites(mem, address, index, count)
-}
-
-func (d *Device) setSprites(src devices.Memory, address, index, count int) {
 	dsti := index * internalSpriteByteSize
 	dst := d.sprites[:]
 
 	for srci := address; srci < address+count*SpriteByteSize; srci++ {
-		bb := src.U8(srci)
+		bb := mem.U8(srci)
 		dst[dsti+0] = byte(bb >> 4)
 		dst[dsti+1] = byte(bb & 0xf)
 		dsti += 2
 	}
+
+	//for i := 0; i < count; i++ {
+	//	x := (index + i) * internalSpriteByteSize
+	//	dumpSprite64(dst[x : x+internalSpriteByteSize])
+	//}
 }
 
-func (d *Device) setBackgroundPalette(mem devices.Memory) {
-	d.setPalette(d.palette[:PaletteSize*4], mem)
+func dumpSprite64(s []byte) {
+	for len(s) > 0 {
+		fmt.Printf("%02x\n", s[:8])
+		s = s[8:]
+	}
+	fmt.Println()
 }
 
-func (d *Device) setForegroundPalette(mem devices.Memory) {
-	d.setPalette(d.palette[PaletteSize*4:], mem)
-}
-
-func (d *Device) setPalette(pal []float32, mem devices.Memory) {
+func (d *Device) setPalette(mem devices.Memory) {
+	pal := d.palette[:PaletteSize*4]
 	addr := mem.U16(cpu.R1)
 	pal[3] = 0 // First entry is always transparent.
 

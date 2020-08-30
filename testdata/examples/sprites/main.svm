@@ -7,7 +7,6 @@
 include "stdlib/fd35.svm"
 include "stdlib/sprdi.svm"
 include "stdlib/gp14.svm"
-include "stdlib/clock.svm"
 
 ;------------------------------------------------------------------------------
 ; Program entrypoint.
@@ -31,29 +30,37 @@ include "stdlib/clock.svm"
 ; setup initializes hardware and memory where needed.
 ;------------------------------------------------------------------------------
 :setup {
-    hwa devices.fd35, $fd35.Manufacturer, $fd35.Serial                         ; Find the device index for the floppy disk drive.
-    hwa devices.sprdi, $sprdi.Manufacturer, $sprdi.Serial                      ; Find the device index for the display.
-    hwa devices.gp14, $gp14.Manufacturer, $gp14.Serial                         ; Find the device index for the gamepad.
+    ; Find the device indices.
+    hwa devices.fd35, $fd35.Manufacturer, $fd35.Serial
+    hwa devices.sprdi, $sprdi.Manufacturer, $sprdi.Serial
+    hwa devices.gp14, $gp14.Manufacturer, $gp14.Serial
 
-    fd35.SyncReadSector devices.fd35, $(1 * fd35.SectorByteSize), $1           ; Load extra sectors into memory. We are currently lacking some font sprites.
-    fd35.SyncReadSector devices.fd35, $(2 * fd35.SectorByteSize), $2
-    fd35.SyncReadSector devices.fd35, $(3 * fd35.SectorByteSize), $3
-    fd35.SyncReadSector devices.fd35, $(4 * fd35.SectorByteSize), $4
+    ; Load extra sectors into memory. We are currently lacking some font sprites.
+    mov r7, $10
+:load_loop
+    mul r6, r7, $fd35.SectorByteSize
+    fd35.SyncReadSector devices.fd35, r6, r7
+    sub r7, r7, $1
+    cgt r7, $0
+    jnz $load_loop
 
-    mov r0, $sprdi.SetPalette                                                  ; Load custom color palette.
+    ; Load custom color palette
+    mov r0, $sprdi.SetPalette
     mov r1, $palette
     int devices.sprdi
 
-break
-    mov r0, $sprdi.SetSprites                                                  ; Load our font.
+    ; Load custom font.
+    mov r0, $sprdi.SetSprites
     mov r1, $font.sprites
     mov r2, $font.ASCIIOffset
     mov r3, $font.SpriteCount
     int devices.sprdi
 
-    mov r0, $sprdi.Draw                                                        ; Draw text to display buffer.
-    mov r1, $str_helloWorld.data
-    mov r2, $str_helloWorld.len
+    ; Draw text to display buffer. Since the buffer contents are never
+    ; changed in this example, we only need to do this once.
+    mov r0, $sprdi.Draw
+    mov r1, $strHelloWorld.data
+    mov r2, $strHelloWorld.len
     int devices.sprdi
     ret
 }
@@ -68,14 +75,14 @@ break
 }
 
 ;------------------------------------------------------------------------------
-; str_helloWorld defines string sprite descriptors, with their positions
+; str_hello_world defines string sprite descriptors, with their positions
 ; preset to put the string in the center of the display.
 ;------------------------------------------------------------------------------
-:str_helloWorld {
+:strHelloWorld {
     const len = 13
-    const _w = sprdi.SpritePixelSize
-    const _x = (sprdi.DisplayWidth / 2) - ((_w*len) / 2)
-    const _y = (sprdi.DisplayHeight / 2) - (_w / 2)
+    const _w  = sprdi.SpritePixelSize
+    const _x  = (sprdi.DisplayWidth / 2) - ((_w*len) / 2)
+    const _y  = (sprdi.DisplayHeight / 2) - (_w / 2)
     :data d8 $'H',  $_x        ,   $_y
           d8 $'e',  $_x + $_w  ,   $_y
           d8 $'l',  $_x + $_w*2,   $_y
