@@ -292,18 +292,25 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	name, _ := arch.Name(i.Opcode)
 	argc := arch.Argc(i.Opcode)
 
+	halfWord := strings.HasSuffix(name, "8")
+
 	for j := 0; j < argc; j++ {
 		argv := i.Args[j]
 
+		value := int(uint16(argv.Value))
+		if halfWord {
+			value = int(uint8(argv.Value >> 8))
+		}
+
 		if argv.Mode == cpu.Register {
 			index := (argv.Address - cpu.UserMemoryCapacity) / 2
-			fmt.Fprintf(&sb, "%4s %04x", arch.RegisterName(index), uint16(argv.Value))
+			fmt.Fprintf(&sb, "%4s %04x", arch.RegisterName(index), value)
 
 		} else if argv.Mode == cpu.Address {
-			fmt.Fprintf(&sb, "%04x %04x", argv.Address, uint16(argv.Value))
+			fmt.Fprintf(&sb, "%04x %04x", argv.Address, value)
 
 		} else {
-			fmt.Fprintf(&sb, "%04x", uint16(argv.Value))
+			fmt.Fprintf(&sb, "%04x", value)
 		}
 
 		if j < argc-1 {
