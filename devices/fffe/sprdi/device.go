@@ -175,6 +175,11 @@ func (d *Device) drawSprite(x, y, n int) {
 	for y := 0; y < SpritePixelSize; y++ {
 		dy := dstAddr + y*DisplayWidth
 		sy := y * SpritePixelSize
+
+		if dy < 0 || dy >= len(dst) || sy < 0 || sy >= len(src)-SpritePixelSize {
+			continue // Invalid bounds -- just ignore it.
+		}
+
 		copy(dst[dy:], src[sy:sy+SpritePixelSize])
 	}
 }
