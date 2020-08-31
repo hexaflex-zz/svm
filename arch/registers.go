@@ -39,9 +39,9 @@ func RegisterIndex(name string) int {
 	return -1
 }
 
-// RegiserName returns the name associated with the given register index.
+// RegisterName returns the name associated with the given register index.
 // Returns "" if the index is not recognized.
-func RegiserName(n int) string {
+func RegisterName(n int) string {
 	switch n {
 	case 0:
 		return "R0"

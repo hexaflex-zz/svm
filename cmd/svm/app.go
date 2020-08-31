@@ -276,10 +276,8 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	// Pause execution if we are in debug mode and this instruction has a breakpoint.
 	if a.config.Debug {
 		dbg = a.debug.Find(i.IP)
-		if dbg != nil {
-			if dbg.Flags&ar.Breakpoint != 0 {
-				a.cpu.Stop()
-			}
+		if dbg != nil && dbg.Flags&ar.Breakpoint != 0 {
+			a.cpu.Stop()
 		}
 	}
 
@@ -299,7 +297,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 
 		if argv.Mode == cpu.Register {
 			index := (argv.Address - cpu.UserMemoryCapacity) / 2
-			fmt.Fprintf(&sb, "%4s %04x", arch.RegiserName(index), uint16(argv.Value))
+			fmt.Fprintf(&sb, "%4s %04x", arch.RegisterName(index), uint16(argv.Value))
 
 		} else if argv.Mode == cpu.Address {
 			fmt.Fprintf(&sb, "%04x %04x", argv.Address, uint16(argv.Value))
