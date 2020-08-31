@@ -45,6 +45,10 @@ func (a *assembler) assemble(ast *parser.AST) (*ar.Archive, error) {
 		return nil, err
 	}
 
+	if err := a.evaluateReservedAndAddress(ast.Nodes(), ""); err != nil {
+		return nil, err
+	}
+
 	if err := a.resolveLabels(ast.Nodes(), ""); err != nil {
 		return nil, err
 	}
@@ -58,6 +62,36 @@ func (a *assembler) assemble(ast *parser.AST) (*ar.Archive, error) {
 	}
 
 	return a.ar, a.compile(ast.Nodes())
+}
+
+// evaluateReservedAndAddress finds `address` and `reserve` directives and evaluates
+// their operand expressions. This is done before any other evaluations take place
+// and before labels are resolved. Label resolving requires correct encoding sizes to be
+// calculated. This can't be done for these two directive types if the expressions are
+// not resolved to their final numeric values.
+func (a *assembler) evaluateReservedAndAddress(nodes *parser.List, scope parser.Scope) error {
+	a.address = 0
+	return nodes.Each(func(_ int, n parser.Node) error {
+		switch n.Type() {
+		case parser.ScopeBegin:
+			scope = scope.Join(n.(*parser.Value).Value)
+
+		case parser.ScopeEnd:
+			scope, _ = scope.Split()
+
+		case parser.Instruction:
+			instr := n.(*parser.List)
+			name := instr.At(0).(*parser.Value)
+
+			if strings.EqualFold(name.Value, "address") || strings.EqualFold(name.Value, "reserve") {
+				err := eval.Evaluate(instr, a.resolveReference, scope)
+				a.address += encodedLen(n, a.address)
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 // evaluateConstants evaluates constant definitions.
@@ -648,6 +682,7 @@ func isReservedDataDirective(n parser.Node) (int, bool) {
 
 	if expr.Len() == 1 {
 		// No address mode marker.
+		// Technically not correct, but eh, who cares.
 		num = expr.At(0).(*parser.Value)
 	} else {
 		num = expr.At(1).(*parser.Value)
