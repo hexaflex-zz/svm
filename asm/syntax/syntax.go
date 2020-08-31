@@ -19,11 +19,11 @@ func Verify(ast *parser.AST) error {
 		return err
 	}
 
-	if err := translateConst(ast.Nodes()); err != nil {
+	if err := fixScopeNames(ast.Nodes()); err != nil {
 		return err
 	}
 
-	if err := fixScopeNames(ast.Nodes()); err != nil {
+	if err := translateConst(ast.Nodes()); err != nil {
 		return err
 	}
 
@@ -128,9 +128,8 @@ func fixScopeNames(nodes *parser.List) error {
 	return nil
 }
 
-// translateConst finds constant definitions, It looks for uses of these in the rest
-// of the program and replaces those uses with the expression represented by the constant.
-// The const nodes are replaced with simplified versions of themselves:
+// translateConst finds constant definitions and replaces them with
+// simplified versions of themselves:
 //
 //    List{"const", Expr1, Expr2}
 //
@@ -174,42 +173,6 @@ func translateConst(nodes *parser.List) error {
 		newConst := parser.NewList(n.Position(), parser.Constant)
 		newConst.Append(name, expr2)
 		nodes.ReplaceAt(i, newConst)
-
-		if err := replaceConst(nodes, name.Value, expr2.Slice()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// replaceConst finds references to the given constant and replaces the referenec
-// with the specified expression.
-func replaceConst(nodes *parser.List, name string, expr []parser.Node) error {
-	for i := 0; i < nodes.Len(); i++ {
-		n := nodes.At(i)
-
-		if n.Type() == parser.Macro {
-			if err := replaceConst(n.(*parser.List), name, expr); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if (nodes.Type() == parser.Instruction && i < 1) ||
-			(nodes.Type() == parser.Constant && i < 2) {
-			continue
-		}
-
-		if instr, ok := n.(*parser.List); ok {
-			if err := replaceConst(instr, name, expr); err != nil {
-				return err
-			}
-		}
-
-		if isIdent(n, name) {
-			nodes.ReplaceAt(i, expr...)
-			i--
-		}
 	}
 	return nil
 }

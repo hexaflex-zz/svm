@@ -72,6 +72,7 @@ func (a *assembler) assemble(ast *parser.AST) (*ar.Archive, error) {
 func (a *assembler) evaluateReservedAndAddress(nodes *parser.List, scope parser.Scope) error {
 	a.address = 0
 	return nodes.Each(func(_ int, n parser.Node) error {
+		var err error
 		switch n.Type() {
 		case parser.ScopeBegin:
 			scope = scope.Join(n.(*parser.Value).Value)
@@ -84,13 +85,12 @@ func (a *assembler) evaluateReservedAndAddress(nodes *parser.List, scope parser.
 			name := instr.At(0).(*parser.Value)
 
 			if strings.EqualFold(name.Value, "address") || strings.EqualFold(name.Value, "reserve") {
-				err := eval.Evaluate(instr, a.resolveReference, scope)
-				a.address += encodedLen(n, a.address)
-				return err
+				err = eval.Evaluate(instr, a.resolveReference, scope)
 			}
 		}
 
-		return nil
+		a.address += encodedLen(n, a.address)
+		return err
 	})
 }
 
