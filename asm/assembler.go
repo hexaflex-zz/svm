@@ -643,7 +643,16 @@ func isReservedDataDirective(n parser.Node) (int, bool) {
 	}
 
 	expr := instr.At(1).(*parser.List)
-	num := expr.At(1).(*parser.Value)
+
+	var num *parser.Value
+
+	if expr.Len() == 1 {
+		// No address mode marker.
+		num = expr.At(0).(*parser.Value)
+	} else {
+		num = expr.At(1).(*parser.Value)
+	}
+
 	x, _ := parser.ParseNumber(num.Value)
 	return int(x), true
 }
