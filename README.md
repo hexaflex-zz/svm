@@ -24,10 +24,11 @@ language, the architecture and how to interact with peripherals.
   * __asm/syntax__: A helper package for the assembler. It examines a newly parsed AST and
     ensures it does not contain syntax errors. Additionally performs translations of
     certain code constructs.
-* __cmd__: Contains executables. These are mainly front-ends for packages and some useful tools.
-  * __cmd/svm__: Contains the executable VM. This is the one thay actually runs your programs.
+* __cmd__: Contains executables. These are assembler/VM front-ends and some useful tools.
+  * __cmd/svm__: Contains the executable VM. This is the one that actually runs your programs.
   * __cmd/svm-asm__: Contains the executable front-end for the assembler.
-  * __cmd/svm-fdd__: A small program which creates 1.44MB floppy disk images.
+  * __cmd/svm-fdd__: A small program which creates 1.44MB floppy disk images. These are what
+    the VM uses to load your programs.
   * __cmd/svm-sprite__: A small tool which generates SVM source code from sprite sheets.
 * __devices__: The root directory for implementations of all the virtual hardware components.
   As well as defining some common shared interface types.
