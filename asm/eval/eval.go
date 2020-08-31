@@ -9,9 +9,8 @@ import (
 	"github.com/hexaflex/svm/asm/parser"
 )
 
-// referenceFunc finds the address o value for a given external reference.
-// This can be a label or constant. Optionally searches for a scope-local match first.
-// Returns false if it can't be found.
+// referenceFunc finds the address or value for a given external reference.
+// This can be a label or constant. Returns false if it can't be found.
 type referenceFunc func(parser.Scope, string) (int, error)
 
 // Evaluate evaluates the expressions in the given instruction.
