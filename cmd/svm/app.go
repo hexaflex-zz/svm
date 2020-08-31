@@ -299,7 +299,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 
 		value := int(uint16(argv.Value))
 		if halfWord {
-			value = int(uint8(argv.Value >> 8))
+			value = int(uint8(argv.Value))
 		}
 
 		if argv.Mode == cpu.Register {
