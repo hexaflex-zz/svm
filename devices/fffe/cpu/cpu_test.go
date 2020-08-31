@@ -43,6 +43,32 @@ func TestMOV(t *testing.T) {
 	runTest(t, ct)
 }
 
+func TestMOV8_1(t *testing.T) {
+	//   MOV8 r0, $123
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.MOV8, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.HALT)
+
+	ct.want[R0] = 123 << 8
+	ct.want[RIP] = 6
+	runTest(t, ct)
+}
+
+func TestMOV8_2(t *testing.T) {
+	//   MOV8 r0, $abcd
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.MOV8, op(Register, 0), op(Constant, 0xabcd))
+	ct.emit(arch.HALT)
+
+	ct.want[R0] = -0x3300
+	ct.want[RIP] = 6
+	runTest(t, ct)
+}
+
 func TestPUSHPOP(t *testing.T) {
 	//    MOV r0, $123
 	//   PUSH r0
@@ -851,7 +877,7 @@ func runTest(t *testing.T, ct *codeTest) {
 
 	cmp := func(addr, want, have int) {
 		if have != want {
-			t.Fatalf("state mismatch at 0x%04x:\nwant: %v\nhave: %v\n", addr, want, have)
+			t.Fatalf("state mismatch at 0x%04x:\nwant: %x\nhave: %x\n", addr, want, have)
 		}
 	}
 

@@ -113,8 +113,12 @@ func (c *CPU) Step() error {
 	switch instr.Opcode {
 	case arch.MOV:
 		va := args[0].Address
-		vb := args[1].Value
-		mem.SetI16(va, vb)
+		vb := int(uint16(int16(args[1].Value)))
+		mem.SetU16(va, vb)
+	case arch.MOV8:
+		va := args[0].Address
+		vb := int(uint8(int8(args[1].Value)))
+		mem.SetU8(va, vb)
 	case arch.PUSH:
 		c.push(args[0].Value)
 	case arch.POP:

@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 17
+ Document rev.: 18
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -51,11 +51,15 @@
  ====|=============|============================================================
   00 | NOP         | Do nothing (no-op) for one cycle.
   01 | HALT        | Unconditionally halts execution and shuts down the system.
-  02 | MOV x y     | x = y
+  02 | MOV x y     | x = y -- 16-bit copy
+  24 | MOV8 x y    | x = y -- 8-bit copy
   03 | PUSH x      | Pushes x onto the callstack and decrements RSP by 2.
   04 | POP x       | Pops a value from the callstack, stores it in x and
      |             | increments RSP by 2.
   05 | RNG x y z   | x = pseudo-random 16-bit number in the range [y, z).
+     |             | RST/overflow is 1 iff y - z < 0.
+     |             | y and z are treated as unsigned.
+  23 | RNG8 x y z  | x = pseudo-random 8-bit number in the range [y, z).
      |             | RST/overflow is 1 iff y - z < 0.
      |             | y and z are treated as unsigned.
   06 | SEED x      | Sets the seed for the RNG instruction to the value in x.
@@ -107,9 +111,6 @@
      |             | x is treated as unsigned.
  ----|-------------|------------------------------------------------------------
   22 | WAIT x      | Pause execution for x milliseconds.
-  23 | RNG8 x y z  | x = pseudo-random 8-bit number in the range [y, z).
-     |             | RST/overflow is 1 iff y - z < 0.
-     |             | y and z are treated as unsigned.
  ----|-------------|------------------------------------------------------------
 
 
