@@ -199,10 +199,10 @@ func (d *Device) setSprites(mem devices.Memory) {
 		dsti += 2
 	}
 
-	for i := 0; i < count; i++ {
-		x := (index + i) * internalSpriteByteSize
-		dumpSprite64(dst[x : x+internalSpriteByteSize])
-	}
+	//for i := 0; i < count; i++ {
+	//	x := (index + i) * internalSpriteByteSize
+	//	dumpSprite64(dst[x : x+internalSpriteByteSize])
+	//}
 }
 
 func dumpSprite64(s []byte) {
