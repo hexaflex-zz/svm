@@ -114,34 +114,35 @@ func (c *CPU) Step() error {
 	case arch.MOV:
 		va := args[0].Address
 		vb := int(uint16(int16(args[1].Value)))
-		mem.SetU16(va, vb)
-	case arch.MOV8:
-		va := args[0].Address
-		vb := int(uint8(int8(args[1].Value)))
-		mem.SetU8(va, vb)
+		if instr.Wide {
+			mem.SetU16(va, vb)
+		} else {
+			mem.SetU8(va, vb)
+		}
 	case arch.PUSH:
 		c.push(args[0].Value)
 	case arch.POP:
 		mem.SetU16(args[0].Address, c.pop())
 	case arch.RNG:
 		va := args[0].Address
-		vb := int(uint16(args[1].Value))
-		vc := int(uint16(args[2].Value))
-		if vc-vb < 0 {
-			mem.SetRSTOverflow(true)
+		if instr.Wide {
+			vb := int(uint16(args[1].Value))
+			vc := int(uint16(args[2].Value))
+			if vc-vb < 0 {
+				mem.SetRSTOverflow(true)
+			} else {
+				mem.SetRSTOverflow(false)
+				mem.SetI16(va, vb+c.rng.Intn(vc-vb))
+			}
 		} else {
-			mem.SetRSTOverflow(false)
-			mem.SetI16(va, vb+c.rng.Intn(vc-vb))
-		}
-	case arch.RNG8:
-		va := args[0].Address
-		vb := int(uint8(int8(args[1].Value)))
-		vc := int(uint8(int8(args[2].Value)))
-		if vc-vb < 0 {
-			mem.SetRSTOverflow(true)
-		} else {
-			mem.SetRSTOverflow(false)
-			mem.SetI8(va, vb+c.rng.Intn(vc-vb))
+			vb := int(uint8(args[1].Value))
+			vc := int(uint8(args[2].Value))
+			if vc-vb < 0 {
+				mem.SetRSTOverflow(true)
+			} else {
+				mem.SetRSTOverflow(false)
+				mem.SetI8(va, vb+c.rng.Intn(vc-vb))
+			}
 		}
 	case arch.SEED:
 		va := args[0].Value
@@ -149,56 +150,108 @@ func (c *CPU) Step() error {
 
 	case arch.ADD:
 		v := args[1].Value + args[2].Value
-		mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetRSTOverflow(v < -0x7f || v > 0x7f)
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.SUB:
 		v := args[1].Value - args[2].Value
-		mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetRSTOverflow(v < -0x7f || v > 0x7f)
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.MUL:
 		v := args[1].Value * args[2].Value
-		mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetRSTOverflow(v < -0x7f || v > 0x7f)
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.DIV:
 		if args[2].Value == 0 {
 			mem.SetRSTDivideByZero(true)
 		} else {
 			v := args[1].Value / args[2].Value
-			mem.SetU16(args[0].Address, v)
 			mem.SetRSTDivideByZero(false)
+			if instr.Wide {
+				mem.SetU16(args[0].Address, v)
+			} else {
+				mem.SetU8(args[0].Address, v)
+			}
 		}
 	case arch.MOD:
 		if args[2].Value == 0 {
 			mem.SetRSTDivideByZero(true)
 		} else {
 			v := args[1].Value % args[2].Value
-			mem.SetU16(args[0].Address, v)
 			mem.SetRSTDivideByZero(false)
+			if instr.Wide {
+				mem.SetU16(args[0].Address, v)
+			} else {
+				mem.SetU8(args[0].Address, v)
+			}
 		}
 	case arch.SHL:
 		v := args[1].Value << uint(args[2].Value)
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.SHR:
 		v := args[1].Value >> uint(args[2].Value)
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.AND:
 		v := args[1].Value & args[2].Value
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.OR:
 		v := args[1].Value | args[2].Value
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.XOR:
 		v := args[1].Value ^ args[2].Value
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.ABS:
 		v := int(math.Abs(float64(args[1].Value)))
-		mem.SetU16(args[0].Address, v)
+		if instr.Wide {
+			mem.SetU16(args[0].Address, v)
+		} else {
+			mem.SetU8(args[0].Address, v)
+		}
 	case arch.POW:
 		va := float64(args[1].Value)
 		vb := float64(args[2].Value)
 		vc := int(math.Pow(va, vb))
-		mem.SetRSTOverflow(vc < -0x7fff || vc > 0x7fff)
-		mem.SetU16(args[0].Address, vc)
+		if instr.Wide {
+			mem.SetRSTOverflow(vc < -0x7fff || vc > 0x7fff)
+			mem.SetU16(args[0].Address, vc)
+		} else {
+			mem.SetRSTOverflow(vc < -0x7f || vc > 0x7f)
+			mem.SetU8(args[0].Address, vc)
+		}
 
 	case arch.CEQ:
 		mem.SetRSTCompare(args[0].Value == args[1].Value)
@@ -242,7 +295,6 @@ func (c *CPU) Step() error {
 			mem.SetU16(rsp, mem.U16(RIP))
 			mem.SetU16(RIP, args[0].Value)
 		}
-
 	case arch.RET:
 		rsp := mem.U16(RSP)
 		va := mem.U16(rsp + 2)
@@ -263,8 +315,13 @@ func (c *CPU) Step() error {
 		}
 
 	case arch.WAIT:
-		<-time.After(time.Millisecond * time.Duration(args[0].Value))
-
+		var v int
+		if instr.Wide {
+			v = int(uint16(args[0].Value))
+		} else {
+			v = int(uint8(args[0].Value))
+		}
+		<-time.After(time.Millisecond * time.Duration(v))
 	case arch.NOP:
 		/* nop */
 	case arch.HALT:

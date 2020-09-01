@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 18
+ Document rev.: 19
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -46,20 +46,24 @@
  constants. Unless otherwise stated, non-address operands are treated as signed
  values.
 
+ All instructions operate on 16-bit values by default. If you want to work on
+ 8-bit values instead, add the "8" suffix to the instruction name. E.g.:
+ `ADD a, b, c` becomes `ADD8 a, b, c`. This suffix is allowed on all 
+ instruction names, even though on some it won't have any effect. For instance,
+ the instructions with zero operands.
+
+ Note that addresses are always considered 16 bits.
+
 
    # | Name        | Description
  ====|=============|============================================================
   00 | NOP         | Do nothing (no-op) for one cycle.
   01 | HALT        | Unconditionally halts execution and shuts down the system.
-  02 | MOV x y     | x = y -- 16-bit copy
-  24 | MOV8 x y    | x = y -- 8-bit copy
+  02 | MOV x y     | x = y
   03 | PUSH x      | Pushes x onto the callstack and decrements RSP by 2.
   04 | POP x       | Pops a value from the callstack, stores it in x and
      |             | increments RSP by 2.
   05 | RNG x y z   | x = pseudo-random 16-bit number in the range [y, z).
-     |             | RST/overflow is 1 iff y - z < 0.
-     |             | y and z are treated as unsigned.
-  23 | RNG8 x y z  | x = pseudo-random 8-bit number in the range [y, z).
      |             | RST/overflow is 1 iff y - z < 0.
      |             | y and z are treated as unsigned.
   06 | SEED x      | Sets the seed for the RNG instruction to the value in x.
@@ -122,14 +126,17 @@
  depending on the number- and type of their operands. The smallest being 1 byte
  and the widest being 10 bytes. The bit layout is as follows:
 
-   aaaaaaaa bbbbbbbb bbbbbbbb bbbbbbbb
-            cccccccc cccccccc cccccccc
+   abbbbbbb cccccccc cccccccc cccccccc
             dddddddd dddddddd dddddddd
+            eeeeeeee eeeeeeee eeeeeeee
 
-	a: 8 bit opcode.
-   b: 0-, 8-, 24-bit operand A.
-   c: 0-, 8-, 24-bit operand B.
-   d: 0-, 8-, 24-bit operand C.
+	a: 1 bit size marker.
+      0: 8-bit operation.
+      1: 16-bit operation
+	b: 7 bit opcode.
+   c: 0-, 8-, 24-bit operand A.
+   d: 0-, 8-, 24-bit operand B.
+   e: 0-, 8-, 24-bit operand C.
 
  Layout of an operand:
 

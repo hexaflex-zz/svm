@@ -46,13 +46,16 @@ const (
 	INT
 
 	WAIT
-	RNG8
-	MOV8
 )
 
 // Opcode returns the opcode for the given instruction name.
 // Returns false if the name is not recognized.
 func Opcode(name string) (int, bool) {
+	if strings.HasSuffix(name, "8") {
+		// trim trailing size marker.
+		name = name[:len(name)-1]
+	}
+
 	switch strings.ToUpper(name) {
 	case "NOP":
 		return NOP, true
@@ -129,10 +132,6 @@ func Opcode(name string) (int, bool) {
 
 	case "WAIT":
 		return WAIT, true
-	case "RNG8":
-		return RNG8, true
-	case "MOV8":
-		return MOV8, true
 	}
 
 	return 0, false
@@ -217,10 +216,6 @@ func Name(opcode int) (string, bool) {
 
 	case WAIT:
 		return "WAIT", true
-	case RNG8:
-		return "RNG8", true
-	case MOV8:
-		return "MOV8", true
 	}
 
 	return "", false
@@ -230,9 +225,9 @@ func Name(opcode int) (string, bool) {
 // Returns -1 if the opcode is not recognized.
 func Argc(opcode int) int {
 	switch opcode {
-	case ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, OR, XOR, HWA, POW, RNG, RNG8:
+	case ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, OR, XOR, HWA, POW, RNG:
 		return 3
-	case MOV, CEQ, CNE, CGT, CGE, CLT, CLE, ABS, MOV8:
+	case MOV, CEQ, CNE, CGT, CGE, CLT, CLE, ABS:
 		return 2
 	case INT, JMP, JEZ, JNZ, CALL, CLEZ, CLNZ, PUSH, POP, SEED, WAIT:
 		return 1

@@ -2,7 +2,7 @@
  Assembler & Language
 ===============================================================================
 
- Document rev.: 25
+ Document rev.: 26
 
 
 ===============================================================================
@@ -217,9 +217,6 @@ with a label.
   d16 args              | Writes raw 16-bit operand values into the program.
   d32 args              | Writes raw 32-bit operand values into the program.
   d64 args              | Writes raw 64-bit operand values into the program.
- -----------------------|------------------------------------------------------
-  reserve x             | Reserves x number of bytes without assigning any
-                        | values to it.
  -----------------------|------------------------------------------------------
   macro name args       | Begins a macro definition with the given name and
                         | optional list of operand names. Refer to the Macros

@@ -45,7 +45,7 @@ func (a *assembler) assemble(ast *parser.AST) (*ar.Archive, error) {
 		return nil, err
 	}
 
-	if err := a.evaluateReservedAndAddress(ast.Nodes(), ""); err != nil {
+	if err := a.evaluateAddressDirective(ast.Nodes(), ""); err != nil {
 		return nil, err
 	}
 
@@ -64,12 +64,11 @@ func (a *assembler) assemble(ast *parser.AST) (*ar.Archive, error) {
 	return a.ar, a.compile(ast.Nodes())
 }
 
-// evaluateReservedAndAddress finds `address` and `reserve` directives and evaluates
-// their operand expressions. This is done before any other evaluations take place
-// and before labels are resolved. Label resolving requires correct encoding sizes to be
-// calculated. This can't be done for these two directive types if the expressions are
-// not resolved to their final numeric values.
-func (a *assembler) evaluateReservedAndAddress(nodes *parser.List, scope parser.Scope) error {
+// evaluateAddressDirective finds `address` directives and evaluates their operand expressions.
+// This is done before any other evaluations take place and before labels are resolved.
+// Label resolution requires correct encoding sizes to be calculated. This can't be done if
+// the expressions address directives are not resolved to their final numeric values.
+func (a *assembler) evaluateAddressDirective(nodes *parser.List, scope parser.Scope) error {
 	a.address = 0
 	return nodes.Each(func(_ int, n parser.Node) error {
 		var err error
@@ -84,7 +83,7 @@ func (a *assembler) evaluateReservedAndAddress(nodes *parser.List, scope parser.
 			instr := n.(*parser.List)
 			name := instr.At(0).(*parser.Value)
 
-			if strings.EqualFold(name.Value, "address") || strings.EqualFold(name.Value, "reserve") {
+			if strings.EqualFold(name.Value, "address") {
 				err = eval.Evaluate(instr, a.resolveReference, scope)
 			}
 		}
@@ -403,7 +402,9 @@ func (a *assembler) compile(nodes *parser.List) error {
 	a.ar.Instructions = make([]byte, 0, 0x10000)
 	a.address = 0
 
-	return nodes.Each(func(_ int, n parser.Node) error {
+	for i := 0; i < nodes.Len(); i++ {
+		n := nodes.At(i)
+
 		switch n.Type() {
 		case parser.BreakPoint:
 			a.flags |= ar.Breakpoint
@@ -415,9 +416,9 @@ func (a *assembler) compile(nodes *parser.List) error {
 			}
 			a.emit(n.Position(), code)
 		}
+	}
 
-		return nil
-	})
+	return nil
 }
 
 // emit emits the given instruction.
@@ -475,22 +476,26 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 		return nil, nil
 	}
 
-	if size, ok := isReservedDataDirective(instr); ok {
-		return make([]byte, size), nil
-	}
-
 	if size, ok := isDataDirective(instr); ok {
 		return encodeDataDirective(instr, size), nil
 	}
 
 	name := instr.At(0).(*parser.Value)
-	opcode, ok := arch.Opcode(name.Value)
+	strName := name.Value
+
+	wideMask := 1 << 7
+	if strings.HasSuffix(strName, "8") {
+		strName = strName[:len(strName)-1]
+		wideMask = 0
+	}
+
+	opcode, ok := arch.Opcode(strName)
 	if !ok {
 		return nil, newError(name.Position(), "unknown instruction %q", name.Value)
 	}
 
 	out := make([]byte, 1, encodedLen(instr, a.address))
-	out[0] = byte(opcode)
+	out[0] = byte(wideMask | opcode&0x7f)
 
 	var mode byte
 	var value *parser.Value
@@ -599,10 +604,6 @@ func encodedLen(n parser.Node, address int) int {
 		return size
 	}
 
-	if size, ok := isReservedDataDirective(n); ok {
-		return size
-	}
-
 	if size, ok := isDataDirective(n); ok {
 		return (n.(*parser.List).Len() - 1) * size
 	}
@@ -663,33 +664,6 @@ func isDataDirective(n parser.Node) (int, bool) {
 	}
 
 	return 0, false
-}
-
-// isReservedDataDirective returns true if n represents a 'reserved' directive.
-func isReservedDataDirective(n parser.Node) (int, bool) {
-	if n.Type() != parser.Instruction {
-		return 0, false
-	}
-
-	instr := n.(*parser.List)
-	if !isIdent(instr.At(0), "reserve") {
-		return 0, false
-	}
-
-	expr := instr.At(1).(*parser.List)
-
-	var num *parser.Value
-
-	if expr.Len() == 1 {
-		// No address mode marker.
-		// Technically not correct, but eh, who cares.
-		num = expr.At(0).(*parser.Value)
-	} else {
-		num = expr.At(1).(*parser.Value)
-	}
-
-	x, _ := parser.ParseNumber(num.Value)
-	return int(x), true
 }
 
 // isAddrDirective returns true if n represents a `addr` directive.

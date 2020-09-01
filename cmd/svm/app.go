@@ -292,14 +292,16 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	name, _ := arch.Name(i.Opcode)
 	argc := arch.Argc(i.Opcode)
 
-	halfWord := strings.HasSuffix(name, "8")
+	if !i.Wide {
+		name += "8"
+	}
 
 	for j := 0; j < argc; j++ {
 		argv := i.Args[j]
 
-		value := int(uint16(argv.Value))
-		if halfWord {
-			value = int(uint8(argv.Value))
+		value := int(uint8(argv.Value))
+		if i.Wide {
+			value = int(uint16(argv.Value))
 		}
 
 		if argv.Mode == cpu.Register {
