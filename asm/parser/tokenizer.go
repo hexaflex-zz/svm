@@ -27,6 +27,7 @@ const (
 	tokOperator
 	tokAddressMode
 	tokBreakPoint
+	tokTypeDescriptor
 )
 
 // tokenFunc is called whenever a new token is read from source.
@@ -239,6 +240,8 @@ func (t *tokenizer) readExpression() bool {
 	t.emit(tokExpressionBegin)
 	defer t.emit(tokExpressionEnd)
 
+	t.readTypeDescriptor()
+
 	for {
 		switch {
 		case t.readSpace():
@@ -258,6 +261,21 @@ func (t *tokenizer) readExpression() bool {
 			t.error("unexpected token '%c'; want comma, operator or value", t.read())
 		}
 	}
+}
+
+// readTypeDescriptor reads a type descriptor at the start of an instruction operand.
+func (t *tokenizer) readTypeDescriptor() bool {
+	switch {
+	case t.readUniqueWord("u8"):
+	case t.readUniqueWord("i8"):
+	case t.readUniqueWord("u16"):
+	case t.readUniqueWord("i16"):
+	default:
+		return false
+	}
+
+	t.emit(tokTypeDescriptor)
+	return true
 }
 
 // readValue reads a single expression value.
@@ -422,10 +440,25 @@ func (t *tokenizer) readName() bool {
 
 	for {
 		r := t.read()
-		if isSpace(rune(r)) || !(r == ':' || r == '_' || r == '.' || isAlpha(r) || isDigit(r)) {
+		if isSpace(rune(r)) || !(r == '_' || r == '.' || isAlpha(r) || isDigit(r)) {
 			t.unread(1)
 			break
 		}
+	}
+
+	return true
+}
+
+// readUniqueWord does the same as readWord, except it ensures that
+// the given word is immediately followed by a word boundary character.
+func (t *tokenizer) readUniqueWord(str string) bool {
+	if !t.readWord(str) {
+		return false
+	}
+
+	if !t.haveWordDelim() {
+		t.unread(-1)
+		return false
 	}
 
 	return true

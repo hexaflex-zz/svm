@@ -91,6 +91,9 @@ func (a *AST) Parse(r io.Reader, filename string) error {
 			set.Append(n)
 			stack = append(stack, n)
 
+		case tokTypeDescriptor:
+			set.Append(NewValue(pos, TypeDescriptor, value))
+
 		case tokBreakPoint:
 			set.Append(NewValue(pos, BreakPoint, value))
 

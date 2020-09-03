@@ -20,6 +20,7 @@ const (
 	Expression
 	BreakPoint
 	Constant
+	TypeDescriptor
 )
 
 func (t Type) String() string {
@@ -52,6 +53,8 @@ func (t Type) String() string {
 		return "Expression"
 	case Conditional:
 		return "Conditional"
+	case TypeDescriptor:
+		return "TypeDescriptor"
 	}
 
 	return ""

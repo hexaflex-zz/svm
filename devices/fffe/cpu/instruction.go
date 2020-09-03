@@ -9,8 +9,6 @@ type Instruction struct {
 	IP     int        // Instruction address.
 	Opcode int        // Instruction opcode.
 	Args   [3]Operand // Operand A, B and C.
-	Wide   bool       // Does the instruction operate on 16-bit values?
-	Signed bool       // Does the instruction operate on signed or unsigned values?
 }
 
 // Decode decodes the next instruction from the given memory bank.
@@ -22,9 +20,7 @@ func (i *Instruction) Decode(m Memory) error {
 		return err
 	}
 
-	i.Opcode = b & 0x3f
-	i.Wide = (b>>7)&1 == 1
-	i.Signed = (b>>6)&1 == 0
+	i.Opcode = b
 
 	argc := arch.Argc(i.Opcode)
 	if argc < 0 {
@@ -32,7 +28,7 @@ func (i *Instruction) Decode(m Memory) error {
 	}
 
 	for j := 0; j < argc; j++ {
-		if err := i.Args[j].Decode(m, i.Wide, i.Signed); err != nil {
+		if err := i.Args[j].Decode(m); err != nil {
 			return err
 		}
 	}
@@ -45,18 +41,18 @@ type Operand struct {
 	Address int         // Optional address representation.
 	Value   int         // Dereferenced value behind the address, if applicable. Otherwise same as Address.
 	Mode    AddressMode // Address mode.
+	Type    byte        // Operand data type.
 }
 
 // Decode decodes the next instruction operand from the given memory bank.
-// isWide determines if the operands are to be treated as 8- or 16 bit values.
-// signed determines if the operands are signed or unsigned values.
-func (op *Operand) Decode(m Memory, isWide, signed bool) error {
+func (op *Operand) Decode(m Memory) error {
 	b, err := m.next8()
 	if err != nil {
 		return err
 	}
 
-	op.Mode = AddressMode(b >> 6)
+	op.Mode = AddressMode(b>>6) & 0x3
+	op.Type = byte(b>>4) & 0x3
 
 	switch op.Mode {
 	case Constant:
@@ -64,17 +60,18 @@ func (op *Operand) Decode(m Memory, isWide, signed bool) error {
 		if err != nil {
 			return err
 		}
-		if signed {
-			op.Value = int(int8(v))
-			if isWide {
-				op.Value = int(int16(v))
-			}
-		} else {
+
+		switch op.Type {
+		case arch.U8:
 			op.Value = int(uint8(v))
-			if isWide {
-				op.Value = int(uint16(v))
-			}
+		case arch.U16:
+			op.Value = int(uint16(v))
+		case arch.I8:
+			op.Value = int(int8(v))
+		case arch.I16:
+			op.Value = int(int16(v))
 		}
+
 		op.Address = op.Value
 
 	case Address:
@@ -82,30 +79,30 @@ func (op *Operand) Decode(m Memory, isWide, signed bool) error {
 		if err != nil {
 			return err
 		}
-		if signed {
-			op.Value = m.I8(op.Address)
-			if isWide {
-				op.Value = m.I16(op.Address)
-			}
-		} else {
+
+		switch op.Type {
+		case arch.U8:
 			op.Value = m.U8(op.Address)
-			if isWide {
-				op.Value = m.U16(op.Address)
-			}
+		case arch.U16:
+			op.Value = m.U16(op.Address)
+		case arch.I8:
+			op.Value = m.I8(op.Address)
+		case arch.I16:
+			op.Value = m.I16(op.Address)
 		}
 
 	case Register:
-		op.Address = (b&0x3f)*2 + UserMemoryCapacity
-		if signed {
-			op.Value = m.I8(op.Address)
-			if isWide {
-				op.Value = m.I16(op.Address)
-			}
-		} else {
+		op.Address = (b&0xf)*2 + UserMemoryCapacity
+
+		switch op.Type {
+		case arch.U8:
 			op.Value = m.U8(op.Address)
-			if isWide {
-				op.Value = m.U16(op.Address)
-			}
+		case arch.U16:
+			op.Value = m.U16(op.Address)
+		case arch.I8:
+			op.Value = m.I8(op.Address)
+		case arch.I16:
+			op.Value = m.I16(op.Address)
 		}
 	}
 

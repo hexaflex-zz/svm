@@ -90,6 +90,36 @@ func (c *CPU) Shutdown() error {
 	return c.devices.Shutdown()
 }
 
+// setVal sets the value at the given address, using the type-specific storage method.
+func setVal(mem Memory, _type byte, addr, value int) {
+	switch _type {
+	case arch.U8:
+		mem.SetU8(addr, value)
+	case arch.U16:
+		mem.SetU16(addr, value)
+	case arch.I8:
+		mem.SetI8(addr, value)
+	case arch.I16:
+		mem.SetI16(addr, value)
+	}
+}
+
+// limits returns the minimum and maximum values for the given type.
+// These are used to eprform type-appropriate overflow checks.
+func limits(_type byte) (int, int) {
+	switch _type {
+	case arch.U8:
+		return 0, 0xff
+	case arch.U16:
+		return 0, 0xffff
+	case arch.I8:
+		return -0x7f, 0x7f
+	case arch.I16:
+		return -0x7fff, 0x7fff
+	}
+	return 0, 0
+}
+
 // Step performs a single execution step.
 // Returns io.EOF if the program has reached its end
 // or no program is loaded.
@@ -110,162 +140,101 @@ func (c *CPU) Step() error {
 
 	c.trace(instr)
 
-	// These values are used in overflow checks.
-	var min, max int
-	if instr.Wide {
-		min = -0x7fff
-		max = 0x7fff
-		if !instr.Signed {
-			min = 0
-			max = 0xffff
-		}
-	} else {
-		min = -0x7f
-		max = 0x7f
-		if !instr.Signed {
-			min = 0
-			max = 0xff
-		}
-	}
-
 	switch instr.Opcode {
 	case arch.MOV:
 		va := args[0].Address
-		vb := int(uint16(int16(args[1].Value)))
-		if instr.Wide {
-			mem.SetU16(va, vb)
-		} else {
-			mem.SetU8(va, vb)
-		}
+		vb := args[1].Value
+		setVal(mem, args[0].Type, va, vb)
+
 	case arch.PUSH:
 		c.push(args[0].Value)
 	case arch.POP:
-		mem.SetU16(args[0].Address, c.pop())
+		va := args[0].Address
+		vb := c.pop()
+		setVal(mem, args[0].Type, va, vb)
 	case arch.RNG:
 		va := args[0].Address
-		if instr.Wide {
-			vb := int(uint16(args[1].Value))
-			vc := int(uint16(args[2].Value))
-			if vc-vb < 0 {
-				mem.SetRSTOverflow(true)
-			} else {
-				mem.SetRSTOverflow(false)
-				mem.SetI16(va, vb+c.rng.Intn(vc-vb))
-			}
+		vb := int(uint(args[1].Value))
+		vc := int(uint(args[2].Value))
+		if vc-vb < 0 {
+			mem.SetRSTOverflow(true)
 		} else {
-			vb := int(uint8(args[1].Value))
-			vc := int(uint8(args[2].Value))
-			if vc-vb < 0 {
-				mem.SetRSTOverflow(true)
-			} else {
-				mem.SetRSTOverflow(false)
-				mem.SetI8(va, vb+c.rng.Intn(vc-vb))
-			}
+			mem.SetRSTOverflow(false)
+			setVal(mem, args[0].Type, va, vb+c.rng.Intn(vc-vb))
 		}
+
 	case arch.SEED:
 		va := args[0].Value
 		c.rng = rand.New(rand.NewSource(int64(va)))
 
 	case arch.ADD:
-		v := args[1].Value + args[2].Value
-		mem.SetRSTOverflow(v < min || v > max)
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value + args[2].Value
+		min, max := limits(args[0].Type)
+		mem.SetRSTOverflow(vb < min || vb > max)
+		setVal(mem, args[0].Type, va, vb)
 	case arch.SUB:
-		v := args[1].Value - args[2].Value
-		mem.SetRSTOverflow(v < min || v > max)
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value - args[2].Value
+		min, max := limits(args[0].Type)
+		mem.SetRSTOverflow(vb < min || vb > max)
+		setVal(mem, args[0].Type, va, vb)
 	case arch.MUL:
-		v := args[1].Value * args[2].Value
-		mem.SetRSTOverflow(v < min || v > max)
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value * args[2].Value
+		min, max := limits(args[0].Type)
+		mem.SetRSTOverflow(vb < min || vb > max)
+		setVal(mem, args[0].Type, va, vb)
 	case arch.DIV:
 		if args[2].Value == 0 {
 			mem.SetRSTDivideByZero(true)
 		} else {
-			v := args[1].Value / args[2].Value
+			va := args[0].Address
+			vb := args[1].Value / args[2].Value
+			setVal(mem, args[0].Type, va, vb)
 			mem.SetRSTDivideByZero(false)
-			if instr.Wide {
-				mem.SetU16(args[0].Address, v)
-			} else {
-				mem.SetU8(args[0].Address, v)
-			}
 		}
 	case arch.MOD:
 		if args[2].Value == 0 {
 			mem.SetRSTDivideByZero(true)
 		} else {
-			v := args[1].Value % args[2].Value
+			va := args[0].Address
+			vb := args[1].Value % args[2].Value
+			setVal(mem, args[0].Type, va, vb)
 			mem.SetRSTDivideByZero(false)
-			if instr.Wide {
-				mem.SetU16(args[0].Address, v)
-			} else {
-				mem.SetU8(args[0].Address, v)
-			}
 		}
 	case arch.SHL:
-		v := args[1].Value << uint(args[2].Value)
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value << uint(args[2].Value)
+		setVal(mem, args[0].Type, va, vb)
 	case arch.SHR:
-		v := args[1].Value >> uint(args[2].Value)
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value >> uint(args[2].Value)
+		setVal(mem, args[0].Type, va, vb)
 	case arch.AND:
-		v := args[1].Value & args[2].Value
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value & args[2].Value
+		setVal(mem, args[0].Type, va, vb)
 	case arch.OR:
-		v := args[1].Value | args[2].Value
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value | args[2].Value
+		setVal(mem, args[0].Type, va, vb)
 	case arch.XOR:
-		v := args[1].Value ^ args[2].Value
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := args[1].Value ^ args[2].Value
+		setVal(mem, args[0].Type, va, vb)
 	case arch.ABS:
-		v := int(math.Abs(float64(args[1].Value)))
-		if instr.Wide {
-			mem.SetU16(args[0].Address, v)
-		} else {
-			mem.SetU8(args[0].Address, v)
-		}
+		va := args[0].Address
+		vb := int(math.Abs(float64(args[1].Value)))
+		setVal(mem, args[0].Type, va, vb)
 	case arch.POW:
-		va := float64(args[1].Value)
-		vb := float64(args[2].Value)
-		vc := int(math.Pow(va, vb))
-		mem.SetRSTOverflow(vc < min || vc > max)
-		if instr.Wide {
-			mem.SetU16(args[0].Address, vc)
-		} else {
-			mem.SetU8(args[0].Address, vc)
-		}
+		va := args[0].Address
+		vb := float64(args[1].Value)
+		vc := float64(args[2].Value)
+		vd := int(math.Pow(vb, vc))
+		min, max := limits(args[0].Type)
+		mem.SetRSTOverflow(vd < min || vd > max)
+		setVal(mem, args[0].Type, va, vd)
 
 	case arch.CEQ:
 		mem.SetRSTCompare(args[0].Value == args[1].Value)
@@ -321,7 +290,7 @@ func (c *CPU) Step() error {
 			mem.SetRSTCompare(false)
 		} else {
 			mem.SetRSTCompare(true)
-			mem.SetU16(args[0].Address, index)
+			setVal(mem, args[0].Type, args[0].Address, index)
 		}
 	case arch.INT:
 		if !c.devices.Int(args[0].Value, mem) {
@@ -329,13 +298,7 @@ func (c *CPU) Step() error {
 		}
 
 	case arch.WAIT:
-		var v int
-		if instr.Wide {
-			v = int(uint16(args[0].Value))
-		} else {
-			v = int(uint8(args[0].Value))
-		}
-		<-time.After(time.Millisecond * time.Duration(v))
+		<-time.After(time.Millisecond * time.Duration(args[0].Value))
 	case arch.NOP:
 		/* nop */
 	case arch.HALT:

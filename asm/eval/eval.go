@@ -45,14 +45,16 @@ func evalExpression(n *parser.List, resolve referenceFunc, scope parser.Scope) e
 	}
 
 	// Replace the expression with the resulting value.
-	// Make sure we preserve the address mode marker.
+	// Make sure we preserve the address mode markers and type descriptors.
 
 	n.Clear()
 
-	if postfix[0].Type() == parser.AddressMode {
-		n.Append(postfix[0], value)
-	} else {
-		n.Append(value)
+	for _, v := range postfix {
+		if v.Type() != parser.TypeDescriptor && v.Type() != parser.AddressMode {
+			n.Append(value)
+			break
+		}
+		n.Append(v)
 	}
 
 	return nil
@@ -65,7 +67,7 @@ func evalPostfix(expr []parser.Node, resolve referenceFunc, scope parser.Scope) 
 	var va, vb interface{}
 	for _, n := range expr {
 		switch n.Type() {
-		case parser.AddressMode:
+		case parser.AddressMode, parser.TypeDescriptor:
 			/* nop */
 
 		case parser.Ident:

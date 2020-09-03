@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 20
+ Document rev.: 21
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -110,17 +110,14 @@
 
 
 ================================================================================
- Instruction size and sign markers.
+ Operand type markers
 ================================================================================
 
  Instructions can be made to operate on signed- or unsigned, 8- or 16-bit
- values. Which one is used, depends on the suffix added to the instruction name.
- A suffix is optional and looks like `:N` where N is one of the values in the
- table below.
- 
- Note that addresses are always considered 16 bits.
+ values. Which one is used, depends on the prefix added to the operand expression.
+ A prefix is optional and is one of the values in the table below.
 
-   Suffix | Description
+   Prefix | Description
  ---------|--------------------------------------------------------------------
        u8 | Instruction operates on unsigned, 8-bit values.
       u16 | Instruction operates on unsigned, 16-bit values.
@@ -128,6 +125,12 @@
       i16 | Instruction operates on signed, 16-bit values. This is the default
           | for instructions without a suffix.
  ---------|-------------------------------------------------------------------- 
+
+ As a usage example:
+
+   add x, y, z         - Operands are treated as signed, 16-bit values.
+   add x, u8 y, u8 z   - Operands y and z are treated as unsigned, 8-bit values.
+
 
 
 ================================================================================
@@ -138,30 +141,29 @@
  depending on the number- and type of their operands. The smallest being 1 byte
  and the widest being 10 bytes. The bit layout is as follows:
 
-   abcccccc dddddddd dddddddd dddddddd
-            eeeeeeee eeeeeeee eeeeeeee
-            ffffffff ffffffff ffffffff
+   aaaaaaaa bbbbbbbb bbbbbbbb bbbbbbbb
+            cccccccc cccccccc cccccccc
+            dddddddd dddddddd dddddddd
 
-	a: 1 bit size marker.
-      0: 8-bit operation.
-      1: 16-bit operation.
-	b: 1 bit sign marker.
-      0: signed operation.
-      1: unsigned operation.
-	c: 6 bit opcode.
-   d: 0-, 8-, 24-bit operand A.
-   e: 0-, 8-, 24-bit operand B.
-   f: 0-, 8-, 24-bit operand C.
+	a: 8 bit opcode.
+   b: 0-, 8-, 24-bit operand A.
+   c: 0-, 8-, 24-bit operand B.
+   d: 0-, 8-, 24-bit operand C.
 
  Layout of an operand:
 
-   aacccccc dddddddd dddddddd
+   aabbcccc dddddddd dddddddd
 
    a: 2 bit operand address mode:
       0 = constant
       1 = address
       2 = register
-   c: 6-bit operand value iff a is 2.
+   b: 2-bit type marker:
+      0 = unsigned 8 bit
+      1 = unsigned 16 bit
+      2 = signed 8 bit
+      3 = signed 16 bit
+   c: 4-bit register index iff a is 2.
    d: 16-bit operand value iff a is 0 or 1.
 
 

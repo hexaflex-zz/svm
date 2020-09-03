@@ -249,7 +249,7 @@ func createConditionalJump(pos1, pos2 parser.Position) (*parser.List, *parser.Va
 func createCompareInstr(expr *parser.List) (*parser.List, error) {
 	var name string
 
-	index := indexOfOperator(expr)
+	index := indexOfType(expr, parser.Operator)
 	if index == -1 {
 		return nil, NewError(expr.Position(), "invalid conditional expression; expected <value> <operator> <value>")
 	}
@@ -284,9 +284,12 @@ func createCompareInstr(expr *parser.List) (*parser.List, error) {
 	return cmp, nil
 }
 
-func indexOfOperator(expr *parser.List) int {
+// indexOfType returns the index of the first element in the
+// given expression with the specified type. Returns -1 if it
+// can not be found.
+func indexOfType(expr *parser.List, ntype parser.Type) int {
 	for i := 0; i < expr.Len(); i++ {
-		if expr.At(i).Type() == parser.Operator {
+		if expr.At(i).Type() == ntype {
 			return i
 		}
 	}
@@ -312,11 +315,18 @@ func testInstructions(nodes *parser.List) error {
 
 		// Remove empty expression nodes. These can occur in some edge cases like having
 		// a zero-operand instruction with a trailing code comment.
+		//
+		// Also ensure that, if there is a type descriptor in the expression, it is the
+		// first element in the expression.
 		for i := 1; i < instr.Len(); i++ {
 			expr := instr.At(i).(*parser.List)
 			if expr.Len() == 0 {
 				instr.Remove(i)
 				i--
+			}
+
+			if idx := indexOfType(expr, parser.TypeDescriptor); idx > 0 {
+				return NewError(expr.At(idx).Position(), "a type descriptor must be the first element in an expression")
 			}
 		}
 

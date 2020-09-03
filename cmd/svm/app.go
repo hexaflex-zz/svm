@@ -292,37 +292,19 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	name, _ := arch.Name(i.Opcode)
 	argc := arch.Argc(i.Opcode)
 
-	if i.Wide {
-		if i.Signed {
-			name += ":i16"
-		} else {
-			name += ":u16"
-		}
-	} else {
-		if i.Signed {
-			name += ":i8"
-		} else {
-			name += ":u8"
-		}
-	}
-
 	for j := 0; j < argc; j++ {
 		argv := i.Args[j]
-
-		value := int(uint8(argv.Value))
-		if i.Wide {
-			value = int(uint16(argv.Value))
-		}
+		_type := arch.TypeName(int(argv.Type))
 
 		if argv.Mode == cpu.Register {
 			index := (argv.Address - cpu.UserMemoryCapacity) / 2
-			fmt.Fprintf(&sb, "%4s %04x", arch.RegisterName(index), value)
+			fmt.Fprintf(&sb, "%3s %4s %04x", _type, arch.RegisterName(index), argv.Value)
 
 		} else if argv.Mode == cpu.Address {
-			fmt.Fprintf(&sb, "%04x %04x", argv.Address, value)
+			fmt.Fprintf(&sb, "%3s %04x %04x", _type, argv.Address, argv.Value)
 
 		} else {
-			fmt.Fprintf(&sb, "%04x", value)
+			fmt.Fprintf(&sb, "%3s %04x", _type, argv.Value)
 		}
 
 		if j < argc-1 {
@@ -339,7 +321,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 		}
 	}
 
-	fmt.Printf("%04x %8s  %s\n", i.IP, name, sb.String())
+	fmt.Printf("%04x %5s  %s\n", i.IP, name, sb.String())
 }
 
 // printHelp writes a short voerview of supported shortcut keys to stdout.

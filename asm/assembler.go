@@ -481,74 +481,63 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	}
 
 	name := instr.At(0).(*parser.Value)
-	strName, suffix := encodeMask(name.Value)
 
-	opcode, ok := arch.Opcode(strName)
+	opcode, ok := arch.Opcode(name.Value)
 	if !ok {
 		return nil, newError(name.Position(), "unknown instruction %q", name.Value)
 	}
 
 	out := make([]byte, 1, encodedLen(instr, a.address))
-	out[0] = byte(suffix | opcode&0x3f)
+	out[0] = byte(opcode)
 
-	var mode byte
+	var _type, mode byte
 	var value *parser.Value
 
 	for i := 1; i < instr.Len(); i++ {
 		expr := instr.At(i).(*parser.List)
 
 		mode = 1
+		_type = arch.I16
 
-		// Check if the expression includes an explicit address mode.
-		if expr.Len() == 2 {
-			switch expr.At(0).(*parser.Value).Value {
-			case "r":
-				mode = 2
-			case "$":
-				mode = 0
-			}
-
-			value = expr.At(1).(*parser.Value)
-		} else {
+		// Check if the expression includes an explicit address mode or type descriptor.
+		if expr.Len() == 1 {
 			value = expr.At(0).(*parser.Value)
+		} else {
+			if expr.At(0).Type() == parser.AddressMode {
+				mode = encodeAddressMode(expr.At(0))
+				value = expr.At(1).(*parser.Value)
+			} else if expr.At(0).Type() == parser.TypeDescriptor {
+				_type = byte(arch.Type(expr.At(0).(*parser.Value).Value))
+				if expr.At(1).Type() == parser.AddressMode {
+					mode = encodeAddressMode(expr.At(1))
+					value = expr.At(2).(*parser.Value)
+				} else {
+					value = expr.At(1).(*parser.Value)
+				}
+			}
 		}
 
 		num, _ := parser.ParseNumber(value.Value)
 
 		if mode == 2 {
-			out = append(out, (mode<<6)|byte(num&0x3f))
+			out = append(out, (mode<<6)|(_type<<4)|byte(num&0x3f))
 		} else {
-			out = append(out, mode<<6, byte(num>>8), byte(num))
+			out = append(out, (mode<<6)|(_type<<4), byte(num>>8), byte(num))
 		}
 	}
 
 	return out, nil
 }
 
-// encodeMask returns the binary representation of the suffix on the given
-// instruction name. Returns the name, minus the suffix.
-func encodeMask(name string) (string, int) {
-	index := strings.Index(name, ":")
-	if index == -1 {
-		return name, 1 << 7
+// encodeAddressMode returns the binary equivalent of the given address mode.
+func encodeAddressMode(node parser.Node) byte {
+	switch node.(*parser.Value).Value {
+	case "r":
+		return 2
+	case "$":
+		return 0
 	}
-
-	suffix := name[index+1:]
-	name = name[:index]
-
-	var mask int
-	switch strings.ToLower(suffix) {
-	case "u8":
-		mask = 1 << 6
-	case "u16":
-		mask = 1<<7 | 1<<6
-	case "i8":
-		mask = 0
-	case "i16":
-		mask = 1 << 7
-	}
-
-	return name, mask
+	return 1
 }
 
 // encodeMacroInvocation replaces the given invocation with the specified macro contents and
