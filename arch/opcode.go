@@ -51,9 +51,9 @@ const (
 // Opcode returns the opcode for the given instruction name.
 // Returns false if the name is not recognized.
 func Opcode(name string) (int, bool) {
-	if strings.HasSuffix(name, "8") {
-		// trim trailing size marker.
-		name = name[:len(name)-1]
+	// trim trailing suffix.
+	if index := strings.Index(name, ":"); index > -1 {
+		name = name[:index]
 	}
 
 	switch strings.ToUpper(name) {

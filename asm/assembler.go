@@ -481,13 +481,7 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	}
 
 	name := instr.At(0).(*parser.Value)
-	strName := name.Value
-
-	wideMask := 1 << 7
-	if strings.HasSuffix(strName, "8") {
-		strName = strName[:len(strName)-1]
-		wideMask = 0
-	}
+	strName, suffix := encodeMask(name.Value)
 
 	opcode, ok := arch.Opcode(strName)
 	if !ok {
@@ -495,7 +489,7 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	}
 
 	out := make([]byte, 1, encodedLen(instr, a.address))
-	out[0] = byte(wideMask | opcode&0x7f)
+	out[0] = byte(suffix | opcode&0x3f)
 
 	var mode byte
 	var value *parser.Value
@@ -529,6 +523,32 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+// encodeMask returns the binary representation of the suffix on the given
+// instruction name. Returns the name, minus the suffix.
+func encodeMask(name string) (string, int) {
+	index := strings.Index(name, ":")
+	if index == -1 {
+		return name, 1 << 7
+	}
+
+	suffix := name[index+1:]
+	name = name[:index]
+
+	var mask int
+	switch strings.ToLower(suffix) {
+	case "u8":
+		mask = 1 << 6
+	case "u16":
+		mask = 1<<7 | 1<<6
+	case "i8":
+		mask = 0
+	case "i16":
+		mask = 1 << 7
+	}
+
+	return name, mask
 }
 
 // encodeMacroInvocation replaces the given invocation with the specified macro contents and

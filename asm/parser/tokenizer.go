@@ -422,7 +422,7 @@ func (t *tokenizer) readName() bool {
 
 	for {
 		r := t.read()
-		if isSpace(rune(r)) || !(r == '_' || r == '.' || isAlpha(r) || isDigit(r)) {
+		if isSpace(rune(r)) || !(r == ':' || r == '_' || r == '.' || isAlpha(r) || isDigit(r)) {
 			t.unread(1)
 			break
 		}

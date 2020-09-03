@@ -38,7 +38,7 @@ func TestWAIT8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.WAIT, false), arg(Constant, 500))
+	ct.emit(op(arch.WAIT, i8), arg(Constant, 500))
 	ct.emit(op(arch.HALT))
 
 	start := time.Now()
@@ -68,7 +68,7 @@ func TestMOV8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.MOV, false), arg(Register, 0), arg(Constant, 123))
+	ct.emit(op(arch.MOV, i8), arg(Register, 0), arg(Constant, 123))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 123 << 8
@@ -114,7 +114,7 @@ func TestADD8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.ADD, false), arg(Register, 0), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.ADD, i8), arg(Register, 0), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 3 << 8
@@ -142,7 +142,7 @@ func TestADD8Overflow(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.ADD, false), arg(Register, 0), arg(Constant, 0x7f), arg(Constant, 1))
+	ct.emit(op(arch.ADD, i8), arg(Register, 0), arg(Constant, 0x7f), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = -0x80 << 8
@@ -170,7 +170,7 @@ func TestSUB81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SUB, false), arg(Register, 0), arg(Constant, 2), arg(Constant, 1))
+	ct.emit(op(arch.SUB, i8), arg(Register, 0), arg(Constant, 2), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 1 << 8
@@ -198,7 +198,7 @@ func TestSUB82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SUB, false), arg(Register, 0), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.SUB, i8), arg(Register, 0), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = -1 << 8
@@ -212,7 +212,7 @@ func TestSUBOverflow(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SUB), arg(Register, 0), arg(Constant, -0x7fff), arg(Constant, 2))
+	ct.emit(op(arch.SUB, i16), arg(Register, 0), arg(Constant, -0x7fff), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 0x7fff
@@ -222,11 +222,11 @@ func TestSUBOverflow(t *testing.T) {
 }
 
 func TestSUB8Overflow(t *testing.T) {
-	//   SUB8 r0, $-0x7f, $2
+	//   SUB:i8 r0, $-0x7f, $2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SUB, false), arg(Register, 0), arg(Constant, -0x7f), arg(Constant, 2))
+	ct.emit(op(arch.SUB, i8), arg(Register, 0), arg(Constant, -0x7f), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 0x7f << 8
@@ -254,7 +254,7 @@ func TestMUL8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.MUL, false), arg(Register, 0), arg(Constant, 2), arg(Constant, 3))
+	ct.emit(op(arch.MUL, i8), arg(Register, 0), arg(Constant, 2), arg(Constant, 3))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 6 << 8
@@ -282,7 +282,7 @@ func TestMUL8Overflow(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.MUL, false), arg(Register, 0), arg(Constant, 0x7f), arg(Constant, 2))
+	ct.emit(op(arch.MUL, i8), arg(Register, 0), arg(Constant, 0x7f), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = -2 << 8
@@ -310,7 +310,7 @@ func TestDIV8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.DIV, false), arg(Register, 0), arg(Constant, 4), arg(Constant, 2))
+	ct.emit(op(arch.DIV, i8), arg(Register, 0), arg(Constant, 4), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 2 << 8
@@ -338,7 +338,7 @@ func TestDIV8DivideByZero(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.DIV, false), arg(Register, 0), arg(Constant, 4), arg(Constant, 0))
+	ct.emit(op(arch.DIV, i8), arg(Register, 0), arg(Constant, 4), arg(Constant, 0))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 0
@@ -366,7 +366,7 @@ func TestMOD8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.MOD, false), arg(Register, 0), arg(Constant, 4), arg(Constant, 3))
+	ct.emit(op(arch.MOD, i8), arg(Register, 0), arg(Constant, 4), arg(Constant, 3))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 1 << 8
@@ -394,7 +394,7 @@ func TestMOD8DivideByZero(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.MOD, false), arg(Register, 0), arg(Constant, 4), arg(Constant, 0))
+	ct.emit(op(arch.MOD, i8), arg(Register, 0), arg(Constant, 4), arg(Constant, 0))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 0
@@ -421,7 +421,7 @@ func TestSHL8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SHL, false), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
+	ct.emit(op(arch.SHL, i8), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 10 << 8
@@ -447,7 +447,7 @@ func TestSHR8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SHR, false), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
+	ct.emit(op(arch.SHR, i8), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 2 << 8
@@ -473,7 +473,7 @@ func TestAND8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.AND, false), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
+	ct.emit(op(arch.AND, i8), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 1 << 8
@@ -499,7 +499,7 @@ func TestOR81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.OR, false), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
+	ct.emit(op(arch.OR, i8), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 5 << 8
@@ -525,7 +525,7 @@ func TestOR82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.OR, false), arg(Register, 0), arg(Constant, 4), arg(Constant, 1))
+	ct.emit(op(arch.OR, i8), arg(Register, 0), arg(Constant, 4), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 5 << 8
@@ -551,7 +551,7 @@ func TestXOR81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.XOR, false), arg(Register, 0), arg(Constant, 4), arg(Constant, 1))
+	ct.emit(op(arch.XOR, i8), arg(Register, 0), arg(Constant, 4), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 5 << 8
@@ -577,7 +577,7 @@ func TestXOR82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.XOR, false), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
+	ct.emit(op(arch.XOR, i8), arg(Register, 0), arg(Constant, 5), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 4 << 8
@@ -604,7 +604,7 @@ func TestABS81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.ABS, false), arg(Register, 0), arg(Constant, 1))
+	ct.emit(op(arch.ABS, i8), arg(Register, 0), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 1 << 8
@@ -632,7 +632,7 @@ func TestABS82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.ABS, false), arg(Register, 0), arg(Constant, -1))
+	ct.emit(op(arch.ABS, i8), arg(Register, 0), arg(Constant, -1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 1 << 8
@@ -660,7 +660,7 @@ func TestPOW81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.POW, false), arg(Register, 0), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.POW, i8), arg(Register, 0), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 4 << 8
@@ -688,7 +688,7 @@ func TestPOW82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.POW, false), arg(Register, 0), arg(Constant, 0x7f), arg(Constant, 2))
+	ct.emit(op(arch.POW, i8), arg(Register, 0), arg(Constant, 0x7f), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[R0] = 1 << 8
@@ -715,7 +715,7 @@ func TestCEQ81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CEQ, false), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.CEQ, i8), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -741,7 +741,7 @@ func TestCEQ82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CEQ, false), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.CEQ, i8), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -767,7 +767,7 @@ func TestCNE81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CNE, false), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.CNE, i8), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -793,7 +793,7 @@ func TestCNE82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CNE, false), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.CNE, i8), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -819,7 +819,7 @@ func TestCGT81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CGT, false), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.CGT, i8), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -845,7 +845,7 @@ func TestCGT82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CGT, false), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.CGT, i8), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -871,7 +871,7 @@ func TestCGT83(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CGT, false), arg(Constant, 2), arg(Constant, 1))
+	ct.emit(op(arch.CGT, i8), arg(Constant, 2), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -897,7 +897,7 @@ func TestCGE81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CGE, false), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.CGE, i8), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -923,7 +923,7 @@ func TestCGE82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CGE, false), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.CGE, i8), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -949,7 +949,7 @@ func TestCLT81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CLT, false), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.CLT, i8), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -975,7 +975,7 @@ func TestCLT82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CLT, false), arg(Constant, 1), arg(Constant, 2))
+	ct.emit(op(arch.CLT, i8), arg(Constant, 1), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -1001,7 +1001,7 @@ func TestCLT83(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CLT, false), arg(Constant, 2), arg(Constant, 1))
+	ct.emit(op(arch.CLT, i8), arg(Constant, 2), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -1027,7 +1027,7 @@ func TestCLE81(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CLE, false), arg(Constant, 2), arg(Constant, 2))
+	ct.emit(op(arch.CLE, i8), arg(Constant, 2), arg(Constant, 2))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -1053,7 +1053,7 @@ func TestCLE82(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.CLE, false), arg(Constant, 2), arg(Constant, 1))
+	ct.emit(op(arch.CLE, i8), arg(Constant, 2), arg(Constant, 1))
 	ct.emit(op(arch.HALT))
 
 	ct.want[RIP] = 8
@@ -1369,11 +1369,11 @@ func TestSEED8RNG8(t *testing.T) {
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(op(arch.SEED, false), arg(Constant, 0))
-	ct.emit(op(arch.RNG, false), arg(Register, 0), arg(Constant, 0), arg(Constant, 10))
-	ct.emit(op(arch.SEED, false), arg(Constant, 0))
-	ct.emit(op(arch.RNG, false), arg(Register, 1), arg(Constant, 0), arg(Constant, 10))
-	ct.emit(op(arch.HALT, false))
+	ct.emit(op(arch.SEED, i8), arg(Constant, 0))
+	ct.emit(op(arch.RNG, i8), arg(Register, 0), arg(Constant, 0), arg(Constant, 10))
+	ct.emit(op(arch.SEED, i8), arg(Constant, 0))
+	ct.emit(op(arch.RNG, i8), arg(Register, 1), arg(Constant, 0), arg(Constant, 10))
+	ct.emit(op(arch.HALT, i8))
 
 	rng := rand.New(rand.NewSource(0))
 	ct.want[R0] = rng.Intn(10) << 8
@@ -1467,12 +1467,18 @@ func (ct *codeTest) emit(opcode byte, args ...[2]int) {
 	}
 }
 
-func op(opcode int, wide ...bool) byte {
-	mask := byte(1 << 7)
-	if len(wide) > 0 && !wide[0] {
-		mask = 0
+const (
+	u8  = 1 << 6
+	u16 = 1<<7 | 1<<6
+	i8  = 0
+	i16 = 1 << 7
+)
+
+func op(opcode int, suffix ...byte) byte {
+	if len(suffix) > 0 {
+		return suffix[0] | byte(opcode&0x3f)
 	}
-	return mask | byte(opcode&0x7f)
+	return i16 | byte(opcode&0x3f)
 }
 
 func arg(mode AddressMode, value int) [2]int {

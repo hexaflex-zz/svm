@@ -6,9 +6,9 @@
 ;------------------------------------------------------------------------------
 :recolor {
     ; Set the last palette color to something random.
-    rng8 palette+45, $0, $255
-    rng8 palette+46, $0, $255
-    rng8 palette+47, $0, $255
+    rng:u8 palette+45, $0, $255
+    rng:u8 palette+46, $0, $255
+    rng:u8 palette+47, $0, $255
 
     ; reload color palette.
     mov  r0, $sprdi.SetPalette

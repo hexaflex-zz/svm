@@ -110,6 +110,24 @@ func (c *CPU) Step() error {
 
 	c.trace(instr)
 
+	// These values are used in overflow checks.
+	var min, max int
+	if instr.Wide {
+		min = -0x7fff
+		max = 0x7fff
+		if !instr.Signed {
+			min = 0
+			max = 0xffff
+		}
+	} else {
+		min = -0x7f
+		max = 0x7f
+		if !instr.Signed {
+			min = 0
+			max = 0xff
+		}
+	}
+
 	switch instr.Opcode {
 	case arch.MOV:
 		va := args[0].Address
@@ -150,29 +168,26 @@ func (c *CPU) Step() error {
 
 	case arch.ADD:
 		v := args[1].Value + args[2].Value
+		mem.SetRSTOverflow(v < min || v > max)
 		if instr.Wide {
-			mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
 			mem.SetU16(args[0].Address, v)
 		} else {
-			mem.SetRSTOverflow(v < -0x7f || v > 0x7f)
 			mem.SetU8(args[0].Address, v)
 		}
 	case arch.SUB:
 		v := args[1].Value - args[2].Value
+		mem.SetRSTOverflow(v < min || v > max)
 		if instr.Wide {
-			mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
 			mem.SetU16(args[0].Address, v)
 		} else {
-			mem.SetRSTOverflow(v < -0x7f || v > 0x7f)
 			mem.SetU8(args[0].Address, v)
 		}
 	case arch.MUL:
 		v := args[1].Value * args[2].Value
+		mem.SetRSTOverflow(v < min || v > max)
 		if instr.Wide {
-			mem.SetRSTOverflow(v < -0x7fff || v > 0x7fff)
 			mem.SetU16(args[0].Address, v)
 		} else {
-			mem.SetRSTOverflow(v < -0x7f || v > 0x7f)
 			mem.SetU8(args[0].Address, v)
 		}
 	case arch.DIV:
@@ -245,11 +260,10 @@ func (c *CPU) Step() error {
 		va := float64(args[1].Value)
 		vb := float64(args[2].Value)
 		vc := int(math.Pow(va, vb))
+		mem.SetRSTOverflow(vc < min || vc > max)
 		if instr.Wide {
-			mem.SetRSTOverflow(vc < -0x7fff || vc > 0x7fff)
 			mem.SetU16(args[0].Address, vc)
 		} else {
-			mem.SetRSTOverflow(vc < -0x7f || vc > 0x7f)
 			mem.SetU8(args[0].Address, vc)
 		}
 

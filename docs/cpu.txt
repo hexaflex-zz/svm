@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 19
+ Document rev.: 20
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -43,16 +43,7 @@
 ================================================================================
 
  Operands can be either numeric literals, label names, registers or named
- constants. Unless otherwise stated, non-address operands are treated as signed
- values.
-
- All instructions operate on 16-bit values by default. If you want to work on
- 8-bit values instead, add the "8" suffix to the instruction name. E.g.:
- `ADD a, b, c` becomes `ADD8 a, b, c`. This suffix is allowed on all 
- instruction names, even though on some it won't have any effect. For instance,
- the instructions with zero operands.
-
- Note that addresses are always considered 16 bits.
+ constants.
 
 
    # | Name        | Description
@@ -119,6 +110,27 @@
 
 
 ================================================================================
+ Instruction size and sign markers.
+================================================================================
+
+ Instructions can be made to operate on signed- or unsigned, 8- or 16-bit
+ values. Which one is used, depends on the suffix added to the instruction name.
+ A suffix is optional and looks like `:N` where N is one of the values in the
+ table below.
+ 
+ Note that addresses are always considered 16 bits.
+
+   Suffix | Description
+ ---------|--------------------------------------------------------------------
+       u8 | Instruction operates on unsigned, 8-bit values.
+      u16 | Instruction operates on unsigned, 16-bit values.
+       i8 | Instruction operates on signed, 8-bit values.
+      i16 | Instruction operates on signed, 16-bit values. This is the default
+          | for instructions without a suffix.
+ ---------|-------------------------------------------------------------------- 
+
+
+================================================================================
  Instruction Encoding
 ================================================================================
 
@@ -126,17 +138,20 @@
  depending on the number- and type of their operands. The smallest being 1 byte
  and the widest being 10 bytes. The bit layout is as follows:
 
-   abbbbbbb cccccccc cccccccc cccccccc
-            dddddddd dddddddd dddddddd
+   abcccccc dddddddd dddddddd dddddddd
             eeeeeeee eeeeeeee eeeeeeee
+            ffffffff ffffffff ffffffff
 
 	a: 1 bit size marker.
       0: 8-bit operation.
-      1: 16-bit operation
-	b: 7 bit opcode.
-   c: 0-, 8-, 24-bit operand A.
-   d: 0-, 8-, 24-bit operand B.
-   e: 0-, 8-, 24-bit operand C.
+      1: 16-bit operation.
+	b: 1 bit sign marker.
+      0: signed operation.
+      1: unsigned operation.
+	c: 6 bit opcode.
+   d: 0-, 8-, 24-bit operand A.
+   e: 0-, 8-, 24-bit operand B.
+   f: 0-, 8-, 24-bit operand C.
 
  Layout of an operand:
 
