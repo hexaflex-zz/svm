@@ -1491,9 +1491,22 @@ func trace(i *Instruction) {
 		name = fmt.Sprintf("%02x", i.Opcode)
 	}
 
-	if !i.Wide {
-		name += "8"
+	var suffix string
+	if i.Wide {
+		if i.Signed {
+			suffix = ":i16"
+		} else {
+			suffix = ":u16"
+		}
+	} else {
+		if i.Signed {
+			suffix = ":i8"
+		} else {
+			suffix = ":u8"
+		}
 	}
+
+	name += suffix
 
 	var sb strings.Builder
 

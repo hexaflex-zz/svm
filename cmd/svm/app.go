@@ -292,8 +292,18 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 	name, _ := arch.Name(i.Opcode)
 	argc := arch.Argc(i.Opcode)
 
-	if !i.Wide {
-		name += "8"
+	if i.Wide {
+		if i.Signed {
+			name += ":i16"
+		} else {
+			name += ":u16"
+		}
+	} else {
+		if i.Signed {
+			name += ":i8"
+		} else {
+			name += ":u8"
+		}
 	}
 
 	for j := 0; j < argc; j++ {
@@ -329,7 +339,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 		}
 	}
 
-	fmt.Printf("%04x %5s  %s\n", i.IP, name, sb.String())
+	fmt.Printf("%04x %8s  %s\n", i.IP, name, sb.String())
 }
 
 // printHelp writes a short voerview of supported shortcut keys to stdout.
