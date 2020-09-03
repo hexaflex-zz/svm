@@ -245,7 +245,7 @@ func createConditionalJump(pos1, pos2 parser.Position) (*parser.List, *parser.Va
 	return jmp, lbl
 }
 
-// createCompareInstr creates a compare unstruction from the given condition expression.
+// createCompareInstr creates a compare instruction from the given condition expression.
 func createCompareInstr(expr *parser.List) (*parser.List, error) {
 	var name string
 

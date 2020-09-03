@@ -240,8 +240,6 @@ func (t *tokenizer) readExpression() bool {
 	t.emit(tokExpressionBegin)
 	defer t.emit(tokExpressionEnd)
 
-	t.readTypeDescriptor()
-
 	for {
 		switch {
 		case t.readSpace():
@@ -255,6 +253,7 @@ func (t *tokenizer) readExpression() bool {
 		case t.readChar(','), t.readChar('='):
 			t.unread(1)
 			return true
+		case t.readTypeDescriptor():
 		case t.readOperator():
 		case t.readValue():
 		default:
