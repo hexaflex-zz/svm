@@ -314,7 +314,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 
 	// Add source context of it is available.
 	if dbg != nil {
-		pad(&sb, 40)
+		pad(&sb, 50)
 		file := a.debug.Files[dbg.File]
 		if len(file) > 0 {
 			fmt.Fprintf(&sb, " %s:%d:%d", file, dbg.Line, dbg.Col)

@@ -46,6 +46,7 @@ const (
 	INT
 
 	WAIT
+	IRET
 )
 
 // Opcode returns the opcode for the given instruction name.
@@ -132,6 +133,8 @@ func Opcode(name string) (int, bool) {
 
 	case "WAIT":
 		return WAIT, true
+	case "IRET":
+		return IRET, true
 	}
 
 	return 0, false
@@ -216,6 +219,8 @@ func Name(opcode int) (string, bool) {
 
 	case WAIT:
 		return "WAIT", true
+	case IRET:
+		return "IRET", true
 	}
 
 	return "", false
@@ -231,7 +236,7 @@ func Argc(opcode int) int {
 		return 2
 	case INT, JMP, JEZ, JNZ, CALL, CLEZ, CLNZ, PUSH, POP, SEED, WAIT:
 		return 1
-	case NOP, HALT, RET:
+	case NOP, HALT, RET, IRET:
 		return 0
 	}
 	return -1

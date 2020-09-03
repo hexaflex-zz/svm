@@ -22,13 +22,14 @@ type TraceFunc func(*Instruction)
 
 // CPU implements the runtime.
 type CPU struct {
-	devices     devices.Map // Connected peripherals.
-	trace       TraceFunc   // Handler for debug trace output.
-	memory      Memory      // System memory.
-	instr       Instruction // Decoded instruction data.
-	rng         *rand.Rand  // Random number generator.
-	intQueue    chan int    // Hardware interrupt queue.
-	initialized uint32      // Is there a valid program loaded?
+	devices      devices.Map // Connected peripherals.
+	trace        TraceFunc   // Handler for debug trace output.
+	memory       Memory      // System memory.
+	instr        Instruction // Decoded instruction data.
+	rng          *rand.Rand  // Random number generator.
+	intQueue     chan int    // Hardware interrupt queue.
+	initialized  uint32      // Is there a valid program loaded?
+	inIntHandler bool        // Is the CPU currently executing an interrupt handler?
 }
 
 // New creates a new CPU for the given program.
@@ -77,6 +78,7 @@ func (c *CPU) Startup() error {
 	c.memory.SetU16(RIP, 0)
 	c.memory.SetU16(RSP, UserMemoryCapacity-2)
 	c.memory.SetU8(RST, 0)
+	c.inIntHandler = false
 
 	return c.devices.Startup(c.queueInterrupt)
 }
@@ -88,36 +90,6 @@ func (c *CPU) Shutdown() error {
 	}
 	log.Println(c.ID(), "shutdown")
 	return c.devices.Shutdown()
-}
-
-// setVal sets the value at the given address, using the type-specific storage method.
-func setVal(mem Memory, _type byte, addr, value int) {
-	switch _type {
-	case arch.U8:
-		mem.SetU8(addr, value)
-	case arch.U16:
-		mem.SetU16(addr, value)
-	case arch.I8:
-		mem.SetI8(addr, value)
-	case arch.I16:
-		mem.SetI16(addr, value)
-	}
-}
-
-// limits returns the minimum and maximum values for the given type.
-// These are used to eprform type-appropriate overflow checks.
-func limits(_type byte) (int, int) {
-	switch _type {
-	case arch.U8:
-		return 0, 0xff
-	case arch.U16:
-		return 0, 0xffff
-	case arch.I8:
-		return -0x7f, 0x7f
-	case arch.I16:
-		return -0x7fff, 0x7fff
-	}
-	return 0, 0
 }
 
 // Step performs a single execution step.
@@ -149,9 +121,7 @@ func (c *CPU) Step() error {
 	case arch.PUSH:
 		c.push(args[0].Value)
 	case arch.POP:
-		va := args[0].Address
-		vb := c.pop()
-		setVal(mem, args[0].Type, va, vb)
+		setVal(mem, args[0].Type, args[0].Address, c.pop())
 	case arch.RNG:
 		va := args[0].Address
 		vb := int(uint(args[1].Value))
@@ -279,10 +249,11 @@ func (c *CPU) Step() error {
 			mem.SetU16(RIP, args[0].Value)
 		}
 	case arch.RET:
-		rsp := mem.U16(RSP)
-		va := mem.U16(rsp + 2)
-		mem.SetU16(RSP, rsp+2)
-		mem.SetU16(RIP, va)
+		mem.SetU16(RIP, c.pop())
+	case arch.IRET:
+		c.inIntHandler = false
+		setVal(mem, args[0].Type, R0, c.pop())
+		mem.SetU16(RIP, c.pop())
 
 	case arch.HWA:
 		id := devices.NewID(args[1].Value, args[2].Value)
@@ -311,6 +282,11 @@ func (c *CPU) Step() error {
 // checkIntQueue checks if there are pending messages in the interrupt queue.
 // If so, it hands control over to the interrupt handler defined in RIA.
 func (c *CPU) checkIntQueue() {
+	// If we are currently inside an interrupt handler, don't jump into another one.
+	if c.inIntHandler {
+		return
+	}
+
 	select {
 	case msg := <-c.intQueue:
 		mem := c.memory[:]
@@ -321,6 +297,8 @@ func (c *CPU) checkIntQueue() {
 
 		mem.SetU16(R0, msg)
 		mem.SetU16(RIP, ria)
+
+		c.inIntHandler = true
 	default:
 	}
 }
@@ -350,5 +328,35 @@ func (c *CPU) pop() int {
 	mem := c.memory[:]
 	rsp := mem.U16(RSP)
 	mem.SetU16(RSP, rsp+2)
-	return mem.I16(rsp + 2)
+	return mem.U16(rsp + 2)
+}
+
+// setVal sets the value at the given address, using the type-specific storage method.
+func setVal(mem Memory, _type byte, addr, value int) {
+	switch _type {
+	case arch.U8:
+		mem.SetU8(addr, value)
+	case arch.U16:
+		mem.SetU16(addr, value)
+	case arch.I8:
+		mem.SetI8(addr, value)
+	case arch.I16:
+		mem.SetI16(addr, value)
+	}
+}
+
+// limits returns the minimum and maximum values for the given type.
+// These are used to eprform type-appropriate overflow checks.
+func limits(_type byte) (int, int) {
+	switch _type {
+	case arch.U8:
+		return 0, 0xff
+	case arch.U16:
+		return 0, 0xffff
+	case arch.I8:
+		return -0x7f, 0x7f
+	case arch.I16:
+		return -0x7fff, 0x7fff
+	}
+	return 0, 0
 }

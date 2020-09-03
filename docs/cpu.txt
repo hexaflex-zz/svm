@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 21
+ Document rev.: 22
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -106,6 +106,9 @@
      |             | x is treated as unsigned.
  ----|-------------|------------------------------------------------------------
   22 | WAIT x      | Pause execution for x milliseconds.
+  23 | IRET        | Returns from an interrupt handler.
+     |             | Restores R0 from the stack.
+     |             | Pops return address from callstack and jumps to it.
  ----|-------------|------------------------------------------------------------
 
 
@@ -193,16 +196,16 @@
  silently ignored. Each execution step, the CPU will check the queue for any
  pending messages and if found, will hand program control to the interrupt
  handler defined in RIA. Once this handler is finished, control returns to
- where it left off.
+ where it left off or a new pending interrupt. If interrupts are triggered too
+ quickly, this can mean the CPU never gets to work on the regular program code.
  
  Note: the CPU treats a hardware interrupt as a CALL instruction to the handler
- defined in RIA. One should therefore ensure the handler ends with a RET
- instruction.
-
- Note: When the handler is executed, the CPU creates a callstack backup of R0
+ defined in RIA. One should ensure the handler ends with a IRET instruction.
+ This is a special version of RET, specifically for the interrupt handler.
+ When the handler is executed, the CPU creates a callstack backup of R0
  register and then sets the register to the Interrupt Id provided by the
- hardware making the request. Once the handler returns, the R0 register should
- manually be restored using a POP instruction. 
+ hardware making the request. Once the handler returns, the IRET instruction
+ ensures the R0 register is restored and the call stack remains balanced.
 
 
 ================================================================================

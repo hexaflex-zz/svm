@@ -37,8 +37,7 @@ include "stdlib/clock.svm"
     ; Allows us to choose what code to run if multiple devices
     ; can trigger interrupts.
 
-    pop r0                                                                     ; Be sure to restore R0 when exiting interrupt handler.
-    ret                                                                        ; CPU doesn't do this for you!
+    iret                                                                       ; Make sure to use IRET here!
 }
 
 ; device indices, used in INT instructions.
