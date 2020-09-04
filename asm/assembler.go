@@ -13,20 +13,22 @@ import (
 
 // assembler holds assembler context. It turns the source AST for a single module into a binary archive.
 type assembler struct {
-	ar      *ar.Archive             // Target archive.
-	symbols map[string]int          // Table of labels or constants mapped to their respective addresses and values.
-	macros  map[string]*parser.List // Macro definitions.
-	address int                     // Address at which next instruction is written.
-	flags   ar.DebugFlags           // Optional one-shot flags to be provided with debug symbols.
-	debug   bool                    // Emit debug symbols?
+	ar              *ar.Archive                 // Target archive.
+	symbols         map[string]int              // Table of labels or constants mapped to their respective addresses and values.
+	symbolPositions map[string]*parser.Position // Positions for symbols in the symbols table.
+	macros          map[string]*parser.List     // Macro definitions.
+	address         int                         // Address at which next instruction is written.
+	flags           ar.DebugFlags               // Optional one-shot flags to be provided with debug symbols.
+	debug           bool                        // Emit debug symbols?
 }
 
 func newAssembler(debug bool) *assembler {
 	return &assembler{
-		ar:      ar.New(),
-		symbols: make(map[string]int),
-		macros:  make(map[string]*parser.List),
-		debug:   debug,
+		ar:              ar.New(),
+		symbols:         make(map[string]int),
+		symbolPositions: make(map[string]*parser.Position),
+		macros:          make(map[string]*parser.List),
+		debug:           debug,
 	}
 }
 
@@ -134,8 +136,10 @@ func (a *assembler) evaluateConstant(instr *parser.List, scope parser.Scope) err
 
 	value := expr.At(0).(*parser.Value).Value
 	num, _ := parser.ParseNumber(value)
+	pos := instr.Position()
 
 	a.symbols[key] = int(num)
+	a.symbolPositions[key] = &pos
 	return nil
 }
 
@@ -215,11 +219,14 @@ func (a *assembler) resolveMacros(nodes *parser.List, scope parser.Scope) error 
 		name := macro.At(0).(*parser.Value)
 		name.Value = scope.Join(name.Value).String()
 
-		if a.hasSymbol(name.Value) {
-			return newError(name.Position(), "duplicate symbol definition %q", name.Value)
+		if pos, ok := a.hasSymbol(name.Value); ok {
+			return newError(name.Position(), "duplicate symbol %q; previous definition at %s", name.Value, pos)
 		}
 
-		a.macros[strings.ToLower(name.Value)] = macro
+		key := strings.ToLower(name.Value)
+		pos := n.Position()
+		a.macros[key] = macro
+		a.symbolPositions[key] = &pos
 		nodes.Remove(i)
 		i--
 	}
@@ -377,11 +384,16 @@ func (a *assembler) resolveLabels(nodes *parser.List, scope parser.Scope) error 
 		lbl := n.(*parser.Value)
 		lbl.Value = scope.Join(lbl.Value).String()
 
-		if a.hasSymbol(lbl.Value) {
-			return newError(lbl.Position(), "duplicate definition name %q", lbl.Value)
+		if pos, ok := a.hasSymbol(lbl.Value); ok {
+			return newError(lbl.Position(), "duplicate symbol %q; previous definition at %s", lbl.Value, pos)
 		}
 
-		a.symbols[strings.ToLower(lbl.Value)] = a.address
+		key := strings.ToLower(lbl.Value)
+		pos := lbl.Position()
+
+		a.symbols[key] = a.address
+		a.symbolPositions[key] = &pos
+
 		nodes.Remove(i)
 		i--
 	}
@@ -390,11 +402,15 @@ func (a *assembler) resolveLabels(nodes *parser.List, scope parser.Scope) error 
 }
 
 // hasSymbol returns true if the given symbol is defined as either a label, constant or macro.
-func (a *assembler) hasSymbol(name string) bool {
+// If true, also returns the position of the previous definition.
+func (a *assembler) hasSymbol(name string) (*parser.Position, bool) {
 	name = strings.ToLower(name)
 	_, ok1 := a.symbols[name]
 	_, ok2 := a.macros[name]
-	return ok1 || ok2
+	if ok1 || ok2 {
+		return a.symbolPositions[name], true
+	}
+	return nil, false
 }
 
 // compile compiles all given instructions.
@@ -490,26 +506,27 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	out := make([]byte, 1, encodedLen(instr, a.address))
 	out[0] = byte(opcode)
 
-	var mode, _type byte
+	var mode arch.AddressMode
 	var value *parser.Value
+	var atype arch.Type
 
 	for i := 1; i < instr.Len(); i++ {
 		expr := instr.At(i).(*parser.List)
 
-		mode = byte(arch.ImmediateConstant)
-		_type = byte(arch.I16)
+		mode = arch.ImmediateConstant
+		atype = arch.I16
 
 		// Check if the expression includes an explicit address mode or type descriptor.
 		if expr.Len() == 1 {
 			value = expr.At(0).(*parser.Value)
 		} else {
 			if expr.At(0).Type() == parser.AddressMode {
-				mode = byte(encodeAddressMode(expr.At(0)))
+				mode = encodeAddressMode(expr.At(0))
 				value = expr.At(1).(*parser.Value)
 			} else if expr.At(0).Type() == parser.TypeDescriptor {
-				_type = byte(arch.TypeFromName(expr.At(0).(*parser.Value).Value))
+				atype = arch.TypeFromName(expr.At(0).(*parser.Value).Value)
 				if expr.At(1).Type() == parser.AddressMode {
-					mode = byte(encodeAddressMode(expr.At(1)))
+					mode = encodeAddressMode(expr.At(1))
 					value = expr.At(2).(*parser.Value)
 				} else {
 					value = expr.At(1).(*parser.Value)
@@ -519,10 +536,11 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 
 		num, _ := parser.ParseNumber(value.Value)
 
-		if mode == 2 {
-			out = append(out, (mode<<6)|(_type<<4)|byte(num&0x3f))
-		} else {
-			out = append(out, (mode<<6)|(_type<<4), byte(num>>8), byte(num))
+		switch arch.AddressMode(mode) {
+		case arch.ImmediateConstant, arch.IndirectConstant:
+			out = append(out, byte(mode<<6)|byte(atype<<4), byte(num>>8), byte(num))
+		case arch.ImmediateRegister, arch.IndirectRegister:
+			out = append(out, byte(mode<<6)|byte(atype<<4)|byte(num&0x3f))
 		}
 	}
 
