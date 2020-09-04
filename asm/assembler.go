@@ -534,10 +534,10 @@ func encodeAddressMode(node parser.Node) arch.AddressMode {
 	switch node.(*parser.Value).Value {
 	case "r":
 		return arch.ImmediateRegister
-	case "[":
-		return arch.IndirectConstant
 	case "[r":
 		return arch.IndirectRegister
+	case "[":
+		return arch.IndirectConstant
 	}
 	return arch.ImmediateConstant
 }
@@ -648,12 +648,12 @@ func encodedExprLen(expr *parser.List) int {
 		return encodedAddressModeLen(expr.At(0).(*parser.Value).Value)
 	}
 
-	// Node 0 might have been a type descriptor. AddressMode nodes can follow them.
+	// Node 0 may have been a type descriptor. AddressMode nodes can follow them.
 	if expr.Len() > 1 && expr.At(1).Type() == parser.AddressMode {
 		return encodedAddressModeLen(expr.At(1).(*parser.Value).Value)
 	}
 
-	return 3
+	return encodedAddressModeLen("")
 }
 
 func encodedAddressModeLen(am string) int {
