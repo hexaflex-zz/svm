@@ -79,46 +79,29 @@ func (op *Operand) Decode(m Memory) error {
 		if err != nil {
 			return err
 		}
-
-		switch op.Type {
-		case arch.U8:
-			op.Value = m.U8(op.Address)
-		case arch.U16:
-			op.Value = m.U16(op.Address)
-		case arch.I8:
-			op.Value = m.I8(op.Address)
-		case arch.I16:
-			op.Value = m.I16(op.Address)
-		}
+		op.readMem(m)
 
 	case arch.ImmediateRegister:
 		op.Address = (b&0xf)*2 + UserMemoryCapacity
-
-		switch op.Type {
-		case arch.U8:
-			op.Value = m.U8(op.Address)
-		case arch.U16:
-			op.Value = m.U16(op.Address)
-		case arch.I8:
-			op.Value = m.I8(op.Address)
-		case arch.I16:
-			op.Value = m.I16(op.Address)
-		}
+		op.readMem(m)
 
 	case arch.IndirectRegister:
 		op.Address = m.U16((b&0xf)*2 + UserMemoryCapacity)
-
-		switch op.Type {
-		case arch.U8:
-			op.Value = m.U8(op.Address)
-		case arch.U16:
-			op.Value = m.U16(op.Address)
-		case arch.I8:
-			op.Value = m.I8(op.Address)
-		case arch.I16:
-			op.Value = m.I16(op.Address)
-		}
+		op.readMem(m)
 	}
 
 	return nil
+}
+
+func (op *Operand) readMem(m Memory) {
+	switch op.Type {
+	case arch.U8:
+		op.Value = m.U8(op.Address)
+	case arch.U16:
+		op.Value = m.U16(op.Address)
+	case arch.I8:
+		op.Value = m.I8(op.Address)
+	case arch.I16:
+		op.Value = m.I16(op.Address)
+	}
 }

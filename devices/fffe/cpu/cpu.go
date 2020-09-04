@@ -125,13 +125,13 @@ func (c *CPU) Step() error {
 
 	case arch.INC:
 		va := args[0].Address
-		vb := args[1].Value + 1
+		vb := args[0].Value + 1
 		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vb < min || vb > max)
 		setVal(mem, args[0].Type, va, vb)
 	case arch.DEC:
 		va := args[0].Address
-		vb := args[1].Value - 1
+		vb := args[0].Value - 1
 		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vb < min || vb > max)
 		setVal(mem, args[0].Type, va, vb)
