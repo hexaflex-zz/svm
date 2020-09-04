@@ -305,8 +305,7 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 			index := (argv.Address - cpu.UserMemoryCapacity) / 2
 			fmt.Fprintf(&sb, "%3s %4s %04x", _type, arch.RegisterName(index), argv.Value)
 		case arch.IndirectRegister:
-			index := (argv.Address - cpu.UserMemoryCapacity) / 2
-			fmt.Fprintf(&sb, "%3s %4s %04x %04x", _type, arch.RegisterName(index), argv.Address, argv.Value)
+			fmt.Fprintf(&sb, "%3s %04x %04x", _type, argv.Address, argv.Value)
 		}
 
 		if j < argc-1 {
