@@ -4,7 +4,7 @@
 
  Manufacturer:  0xFFFE
  Serialno.:     0x0001
- Document rev.: 22
+ Document rev.: 23
 
 
  The CPU clock frequency is unbounded and limited by the host system and
@@ -109,6 +109,10 @@
   23 | IRET        | Returns from an interrupt handler.
      |             | Restores R0 from the stack.
      |             | Pops return address from callstack and jumps to it.
+  24 | INC x       | Increments x by 1.
+     |             | RST/overflow is 1 iff operation overflows.
+  25 | DEC x       | Decrements x by 1.
+     |             | RST/overflow is 1 iff operation overflows.
  ----|-------------|------------------------------------------------------------
 
 

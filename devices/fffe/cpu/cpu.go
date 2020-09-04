@@ -122,21 +122,19 @@ func (c *CPU) Step() error {
 		c.push(args[0].Value)
 	case arch.POP:
 		setVal(mem, args[0].Type, args[0].Address, c.pop())
-	case arch.RNG:
+
+	case arch.INC:
 		va := args[0].Address
-		vb := int(uint(args[1].Value))
-		vc := int(uint(args[2].Value))
-		if vc-vb < 0 {
-			mem.SetRSTOverflow(true)
-		} else {
-			mem.SetRSTOverflow(false)
-			setVal(mem, args[0].Type, va, vb+c.rng.Intn(vc-vb))
-		}
-
-	case arch.SEED:
-		va := args[0].Value
-		c.rng = rand.New(rand.NewSource(int64(va)))
-
+		vb := args[1].Value + 1
+		min, max := args[0].Type.Limits()
+		mem.SetRSTOverflow(vb < min || vb > max)
+		setVal(mem, args[0].Type, va, vb)
+	case arch.DEC:
+		va := args[0].Address
+		vb := args[1].Value - 1
+		min, max := args[0].Type.Limits()
+		mem.SetRSTOverflow(vb < min || vb > max)
+		setVal(mem, args[0].Type, va, vb)
 	case arch.ADD:
 		va := args[0].Address
 		vb := args[1].Value + args[2].Value
@@ -205,6 +203,21 @@ func (c *CPU) Step() error {
 		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vd < min || vd > max)
 		setVal(mem, args[0].Type, va, vd)
+
+	case arch.RNG:
+		va := args[0].Address
+		vb := int(uint(args[1].Value))
+		vc := int(uint(args[2].Value))
+		if vc-vb < 0 {
+			mem.SetRSTOverflow(true)
+		} else {
+			mem.SetRSTOverflow(false)
+			setVal(mem, args[0].Type, va, vb+c.rng.Intn(vc-vb))
+		}
+
+	case arch.SEED:
+		va := args[0].Value
+		c.rng = rand.New(rand.NewSource(int64(va)))
 
 	case arch.CEQ:
 		mem.SetRSTCompare(args[0].Value == args[1].Value)

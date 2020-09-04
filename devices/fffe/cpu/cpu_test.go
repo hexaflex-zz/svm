@@ -122,6 +122,35 @@ func TestPUSHPOP(t *testing.T) {
 	runTest(t, ct)
 }
 
+func TestINC(t *testing.T) {
+	//    MOV r0, 123
+	//    INC r0
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
+	ct.emit(arch.INC, op(arch.ImmediateRegister, 0))
+	ct.emit(arch.HALT)
+
+	ct.want[R0] = 124
+	ct.want[RIP] = 8
+	runTest(t, ct)
+}
+
+func TestDEC(t *testing.T) {
+	//    MOV r0, 123
+	//    DEC r0
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
+	ct.emit(arch.DEC, op(arch.ImmediateRegister, 0))
+	ct.emit(arch.HALT)
+
+	ct.want[R0] = 122
+	ct.want[RIP] = 8
+	runTest(t, ct)
+}
 func TestADD(t *testing.T) {
 	//    ADD r0, 1, 2
 	//   HALT
