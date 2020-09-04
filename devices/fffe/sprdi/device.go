@@ -2,7 +2,6 @@
 package sprdi
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/go-gl/gl/v4.2-core/gl"
@@ -203,19 +202,6 @@ func (d *Device) setSprites(mem devices.Memory) {
 		dst[dsti+1] = byte(bb & 0xf)
 		dsti += 2
 	}
-
-	//for i := 0; i < count; i++ {
-	//	x := (index + i) * internalSpriteByteSize
-	//	dumpSprite64(dst[x : x+internalSpriteByteSize])
-	//}
-}
-
-func dumpSprite64(s []byte) {
-	for len(s) > 0 {
-		fmt.Printf("%02x\n", s[:8])
-		s = s[8:]
-	}
-	fmt.Println()
 }
 
 func (d *Device) setPalette(mem devices.Memory) {
