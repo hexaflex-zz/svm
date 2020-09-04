@@ -128,12 +128,48 @@ func (t *tokenizer) readIf() bool {
 	t.emit(tokIfBegin)
 	defer t.emit(tokIfEnd)
 
-	t.readExpression()
-	if !t.readInstruction() {
-		t.error("if statement must be followed by an instruction")
+	if !t.readIfExpression() {
+		t.error("if statement must have a single expression of the form <arg> <operator> <arg>")
+	}
+
+	t.readSpace()
+
+	if !t.readIf() && !t.readInstruction() {
+		t.error("if statement must be followed by an instruction or another if statement")
 	}
 
 	return true
+}
+
+// readIfExpression reads an expression for an If statement.
+// This has a slightly different form than a regular instruction
+// expression. Returns false if the expresion does not have the
+// expected form.
+func (t *tokenizer) readIfExpression() bool {
+	if t.readSpace() {
+		return false
+	}
+
+	t.emit(tokExpressionBegin)
+	defer t.emit(tokExpressionEnd)
+
+	for {
+		switch {
+		case t.readSpace():
+			return true
+		case t.readComment():
+			return true
+		case t.readWord("$$"):
+			t.emit(tokIdent)
+		case t.readWord("$"):
+			t.emit(tokAddressMode)
+		case t.readTypeDescriptor():
+		case t.readOperator():
+		case t.readValue():
+		default:
+			t.error("unexpected token '%c'; want operator or value", t.read())
+		}
+	}
 }
 
 // readScope reads a scope block. This covers zero or more instructions, labels or other
