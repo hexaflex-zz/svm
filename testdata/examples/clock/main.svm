@@ -7,28 +7,30 @@
 include "stdlib/clock.svm"
 
 :main {
-    mov ria, $intHandler                                                       ; Define a new hardware interrupt handler.
+    mov ria, intHandler                                                       ; Define a new hardware interrupt handler.
 
-    hwa devices.clock, $16#fffe, $16#0005                                      ; Find the clock device index.
-    jez $exit
+    hwa [devices.clock], 16#fffe, 16#0005                                      ; Find the clock device index.
+    jez exit
 
-    mov r0, $clock.SetIntID                                                    ; Give clock a new, non-zero id.
-    add r1, devices.clock, $1
-    int devices.clock
+    mov r0, clock.SetIntID                                                    ; Give clock a new, non-zero id.
+    add r1, [devices.clock], 1
+    int [devices.clock]
 
-    mov r0, $clock.SetTimer                                                    ; Start a new 1-second timer.
-    mov r1, $1000
-    int devices.clock
+    mov r0, clock.SetTimer                                                    ; Start a new 1-second timer.
+    mov r1, 1000
+    int [devices.clock]
 
 :loop
-    wait $500
-    jmp $loop
+    wait 500
+    jmp loop
 
 :exit
     halt
 }
 
+;------------------------------------------------------------------------------
 ; Hardware interrupt handler.
+;------------------------------------------------------------------------------
 :intHandler {
     ;
     ; Your interrupt handler code goes here.
@@ -37,10 +39,13 @@ include "stdlib/clock.svm"
     ; Allows us to choose what code to run if multiple devices
     ; can trigger interrupts.
 
-    iret                                                                       ; Make sure to use IRET here!
+    ; Make sure to use IRET here!
+    iret
 }
 
+;------------------------------------------------------------------------------
 ; device indices, used in INT instructions.
+;------------------------------------------------------------------------------
 :devices {
-    :clock d16 $0
+    :clock d16 0
 }

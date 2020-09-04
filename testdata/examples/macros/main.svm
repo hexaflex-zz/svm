@@ -11,4 +11,4 @@ endmacro
 
 
 :main
-    divmod r0, r1, $2, $42
+    divmod r0, r1, 2, 42

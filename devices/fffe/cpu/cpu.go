@@ -140,19 +140,19 @@ func (c *CPU) Step() error {
 	case arch.ADD:
 		va := args[0].Address
 		vb := args[1].Value + args[2].Value
-		min, max := limits(args[0].Type)
+		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vb < min || vb > max)
 		setVal(mem, args[0].Type, va, vb)
 	case arch.SUB:
 		va := args[0].Address
 		vb := args[1].Value - args[2].Value
-		min, max := limits(args[0].Type)
+		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vb < min || vb > max)
 		setVal(mem, args[0].Type, va, vb)
 	case arch.MUL:
 		va := args[0].Address
 		vb := args[1].Value * args[2].Value
-		min, max := limits(args[0].Type)
+		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vb < min || vb > max)
 		setVal(mem, args[0].Type, va, vb)
 	case arch.DIV:
@@ -202,7 +202,7 @@ func (c *CPU) Step() error {
 		vb := float64(args[1].Value)
 		vc := float64(args[2].Value)
 		vd := int(math.Pow(vb, vc))
-		min, max := limits(args[0].Type)
+		min, max := args[0].Type.Limits()
 		mem.SetRSTOverflow(vd < min || vd > max)
 		setVal(mem, args[0].Type, va, vd)
 
@@ -332,7 +332,7 @@ func (c *CPU) pop() int {
 }
 
 // setVal sets the value at the given address, using the type-specific storage method.
-func setVal(mem Memory, _type byte, addr, value int) {
+func setVal(mem Memory, _type arch.Type, addr, value int) {
 	switch _type {
 	case arch.U8:
 		mem.SetU8(addr, value)
@@ -343,20 +343,4 @@ func setVal(mem Memory, _type byte, addr, value int) {
 	case arch.I16:
 		mem.SetI16(addr, value)
 	}
-}
-
-// limits returns the minimum and maximum values for the given type.
-// These are used to eprform type-appropriate overflow checks.
-func limits(_type byte) (int, int) {
-	switch _type {
-	case arch.U8:
-		return 0, 0xff
-	case arch.U16:
-		return 0, 0xffff
-	case arch.I8:
-		return -0x7f, 0x7f
-	case arch.I16:
-		return -0x7fff, 0x7fff
-	}
-	return 0, 0
 }

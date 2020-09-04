@@ -108,14 +108,27 @@ func (a *AST) Parse(r io.Reader, filename string) error {
 
 		case tokIdent:
 			if index := arch.RegisterIndex(value); index > -1 {
-				set.Append(NewValue(pos, AddressMode, "r"))
+				// If this is a second address mode in a row, combine them together.
+				// This happens with an expression like `[r0]`.
+				if set.Len() > 0 && set.At(set.Len()-1).Type() == AddressMode {
+					set.At(set.Len() - 1).(*Value).Value += "r"
+				} else {
+					set.Append(NewValue(pos, AddressMode, "r"))
+				}
+
 				set.Append(NewValue(pos, Number, strconv.Itoa(index)))
 			} else {
 				set.Append(NewValue(pos, Ident, value))
 			}
 
 		case tokAddressMode:
-			set.Append(NewValue(pos, AddressMode, value))
+			// If this is a second address mode in a row, combine them together.
+			// This happens with an expression like `[r0]`.
+			if set.Len() > 0 && set.At(set.Len()-1).Type() == AddressMode {
+				set.At(set.Len() - 1).(*Value).Value += value
+			} else {
+				set.Append(NewValue(pos, AddressMode, value))
+			}
 
 		case tokScopeBegin:
 			set.Append(NewValue(pos, ScopeBegin, ""))

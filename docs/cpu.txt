@@ -158,9 +158,10 @@
    aabbcccc dddddddd dddddddd
 
    a: 2 bit operand address mode:
-      0 = constant
-      1 = address
-      2 = register
+      0 = immediate constant:  123
+      1 = indirect constant:   mem[123]
+      2 = immediate register:  r0
+      3 = indirect register:   mem[r0]
    b: 2-bit type marker:
       0 = unsigned 8 bit
       1 = unsigned 16 bit

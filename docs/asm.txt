@@ -2,7 +2,7 @@
  Assembler & Language
 ===============================================================================
 
- Document rev.: 27
+ Document rev.: 28
 
 
 ===============================================================================
@@ -97,19 +97,10 @@
  When specifying a value for an instruction operand, we can specify one of three
  addressing modes:
 
- * Registers: Whenever the name of a register is used, the assembler assumes
-   the use of the register address mode.
-
    mov r0, r1        ; r0 = r1
-
- * Constants: Values which are meant to be used as-is, are prefixed with '$'.
-
-   mov r0, $123      ; r0 = 123
-
- * Addresses: Values which are meant to be used as memory addresses, are
-   specified without any extra data.
-
-   mov r0, 123       ; r0 = mem[123]
+   mov r0, [r1]      ; r0 = mem[r1]
+   mov r0, 123       ; r0 = 123
+   mov r0, [123]     ; r0 = mem[123]
 
 
 ===============================================================================
@@ -138,13 +129,13 @@
        {
           const foo = 789
           const quux = 987
-          mov r0, $foo                ; r0 = 789
+          mov r0, foo                 ; r0 = 789
        }
-       mov r0, $foo                   ; r0 = 456
-       mov r1, $bar                   ; r0 = 321
+       mov r0, foo                    ; r0 = 456
+       mov r1, bar                    ; r0 = 321
     }
-    mov r0, $foo                      ; r0 = 123
-    mov r1, $quux                     ; Error - quux is defined in a child
+    mov r0, foo                       ; r0 = 123
+    mov r1, quux                      ; Error - quux is defined in a child
                                       ; scope and is not available here.
 
 
@@ -154,11 +145,11 @@ with a label.
 
    :myscope {
       const foo = 123
-      mov r0, $foo                    ; r0 = 123
+      mov r0, foo                     ; r0 = 123
    }
 
-   mov r0, $foo                       ; Error - foo is defined in a child scope.
-   mov r0, $myscope.foo               ; r0 = 123
+   mov r0, foo                        ; Error - foo is defined in a child scope.
+   mov r0, myscope.foo                ; r0 = 123
 
 
 ===============================================================================
@@ -254,14 +245,14 @@ with a label.
 
 Can be invoked as follows:
 
-   divmod r0, r1, $2, $42
+   divmod r0, r1, 2, 42
 
 The assembler will replace any occurance of the above with the contents if the 
 macro definition, replacing the operand names with the actual expressions being
 passed by the programmer:
 
-   div r0, $2, $42
-   mod r1, $2, $42
+   div r0, 2, 42
+   mod r1, 2, 42
 
 
 ================================================================================

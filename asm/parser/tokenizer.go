@@ -161,8 +161,10 @@ func (t *tokenizer) readIfExpression() bool {
 			return true
 		case t.readWord("$$"):
 			t.emit(tokIdent)
-		case t.readWord("$"):
+		case t.readWord("["):
 			t.emit(tokAddressMode)
+		case t.readWord("]"):
+			t.ignore()
 		case t.readTypeDescriptor():
 		case t.readOperator():
 		case t.readValue():
@@ -284,8 +286,10 @@ func (t *tokenizer) readExpression() bool {
 			return false
 		case t.readWord("$$"):
 			t.emit(tokIdent)
-		case t.readWord("$"):
+		case t.readWord("["):
 			t.emit(tokAddressMode)
+		case t.readWord("]"):
+			t.ignore()
 		case t.readChar(','), t.readChar('='):
 			t.unread(1)
 			return true
@@ -551,6 +555,8 @@ func (t *tokenizer) haveWordDelim() bool {
 
 	switch {
 	case r == ',':
+	case r == '[':
+	case r == ']':
 	case isOperator(r):
 	case isSpace(rune(r)):
 	default:

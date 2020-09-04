@@ -294,17 +294,19 @@ func (a *App) debugHandler(i *cpu.Instruction) {
 
 	for j := 0; j < argc; j++ {
 		argv := i.Args[j]
-		_type := arch.TypeName(int(argv.Type))
+		_type := argv.Type.Name()
 
-		if argv.Mode == cpu.Register {
+		switch argv.Mode {
+		case arch.ImmediateConstant:
+			fmt.Fprintf(&sb, "%3s %04x", _type, argv.Value)
+		case arch.IndirectConstant:
+			fmt.Fprintf(&sb, "%3s %04x %04x", _type, argv.Address, argv.Value)
+		case arch.ImmediateRegister:
 			index := (argv.Address - cpu.UserMemoryCapacity) / 2
 			fmt.Fprintf(&sb, "%3s %4s %04x", _type, arch.RegisterName(index), argv.Value)
-
-		} else if argv.Mode == cpu.Address {
-			fmt.Fprintf(&sb, "%3s %04x %04x", _type, argv.Address, argv.Value)
-
-		} else {
-			fmt.Fprintf(&sb, "%3s %04x", _type, argv.Value)
+		case arch.IndirectRegister:
+			index := (argv.Address - cpu.UserMemoryCapacity) / 2
+			fmt.Fprintf(&sb, "%3s %4s %04x %04x", _type, arch.RegisterName(index), argv.Address, argv.Value)
 		}
 
 		if j < argc-1 {

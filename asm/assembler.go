@@ -490,26 +490,26 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 	out := make([]byte, 1, encodedLen(instr, a.address))
 	out[0] = byte(opcode)
 
-	var _type, mode byte
+	var mode, _type byte
 	var value *parser.Value
 
 	for i := 1; i < instr.Len(); i++ {
 		expr := instr.At(i).(*parser.List)
 
-		mode = 1
-		_type = arch.I16
+		mode = byte(arch.ImmediateConstant)
+		_type = byte(arch.I16)
 
 		// Check if the expression includes an explicit address mode or type descriptor.
 		if expr.Len() == 1 {
 			value = expr.At(0).(*parser.Value)
 		} else {
 			if expr.At(0).Type() == parser.AddressMode {
-				mode = encodeAddressMode(expr.At(0))
+				mode = byte(encodeAddressMode(expr.At(0)))
 				value = expr.At(1).(*parser.Value)
 			} else if expr.At(0).Type() == parser.TypeDescriptor {
-				_type = byte(arch.Type(expr.At(0).(*parser.Value).Value))
+				_type = byte(arch.TypeFromName(expr.At(0).(*parser.Value).Value))
 				if expr.At(1).Type() == parser.AddressMode {
-					mode = encodeAddressMode(expr.At(1))
+					mode = byte(encodeAddressMode(expr.At(1)))
 					value = expr.At(2).(*parser.Value)
 				} else {
 					value = expr.At(1).(*parser.Value)
@@ -530,14 +530,16 @@ func (a *assembler) encode(instr *parser.List) ([]byte, error) {
 }
 
 // encodeAddressMode returns the binary equivalent of the given address mode.
-func encodeAddressMode(node parser.Node) byte {
+func encodeAddressMode(node parser.Node) arch.AddressMode {
 	switch node.(*parser.Value).Value {
 	case "r":
-		return 2
-	case "$":
-		return 0
+		return arch.ImmediateRegister
+	case "[":
+		return arch.IndirectConstant
+	case "[r":
+		return arch.IndirectRegister
 	}
-	return 1
+	return arch.ImmediateConstant
 }
 
 // encodeMacroInvocation replaces the given invocation with the specified macro contents and
@@ -642,11 +644,22 @@ func encodedLen(n parser.Node, address int) int {
 
 // encodedExprLen returns the byte size for the encoded version of the given expression.
 func encodedExprLen(expr *parser.List) int {
-	for i := 0; i < expr.Len(); i++ {
-		n := expr.At(i)
-		if n.Type() == parser.AddressMode && n.(*parser.Value).Value == "r" {
-			return 1
-		}
+	if expr.Len() > 0 && expr.At(0).Type() == parser.AddressMode {
+		return encodedAddressModeLen(expr.At(0).(*parser.Value).Value)
+	}
+
+	// Node 0 might have been a type descriptor. AddressMode nodes can follow them.
+	if expr.Len() > 1 && expr.At(1).Type() == parser.AddressMode {
+		return encodedAddressModeLen(expr.At(1).(*parser.Value).Value)
+	}
+
+	return 3
+}
+
+func encodedAddressModeLen(am string) int {
+	switch am {
+	case "r", "[r":
+		return 1
 	}
 	return 3
 }

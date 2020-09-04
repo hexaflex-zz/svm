@@ -12,15 +12,15 @@ include "stdlib/gp14.svm"
 ; Program entrypoint.
 ;------------------------------------------------------------------------------
 :main {
-    call $setup
+    call setup
 
 :loop
-    gp14.JmpOnJustPressed devices.gp14, $gp14.ButtonBack, $exit                ; Exit the program if ButtonBack is pressed.
-    gp14.CallOnJustPressed devices.gp14, $gp14.ButtonA, $recolor               ; Set text color to something random iff ButtonA was pressed.
+    gp14.JmpOnJustPressed [devices.gp14], gp14.ButtonBack, exit                ; Exit the program if ButtonBack is pressed.
+    gp14.CallOnJustPressed [devices.gp14], gp14.ButtonA, recolor               ; Set text color to something random iff ButtonA was pressed.
 
-    mov r0, $sprdi.Swap                                                        ; Present backbuffer.
-    int devices.sprdi
-    jmp $loop
+    mov r0, sprdi.Swap                                                        ; Present backbuffer.
+    int [devices.sprdi]
+    jmp loop
 
 :exit
     halt
@@ -31,37 +31,37 @@ include "stdlib/gp14.svm"
 ;------------------------------------------------------------------------------
 :setup {
     ; Find the device indices.
-    hwa devices.fd35, $fd35.Manufacturer, $fd35.Serial
-    hwa devices.sprdi, $sprdi.Manufacturer, $sprdi.Serial
-    hwa devices.gp14, $gp14.Manufacturer, $gp14.Serial
+    hwa [devices.fd35], u16 fd35.Manufacturer, u16 fd35.Serial
+    hwa [devices.sprdi], u16 sprdi.Manufacturer, u16 sprdi.Serial
+    hwa [devices.gp14], u16 gp14.Manufacturer, u16 gp14.Serial
 
     ; Load extra sectors into memory. We are currently lacking some font sprites.
-    mov r7, $10
+    mov r7, 10
 :load_loop
-    mul r6, r7, $fd35.SectorByteSize
-    fd35.SyncReadSector devices.fd35, r6, r7
-    sub r7, r7, $1
-    cgt r7, $0
-    jnz $load_loop
+    mul r6, r7, fd35.SectorByteSize
+    fd35.SyncReadSector [devices.fd35], r6, r7
+    sub r7, r7, 1
+    cgt r7, 0
+    jnz load_loop
 
     ; Load custom color palette
-    mov r0, $sprdi.SetPalette
-    mov r1, $palette
-    int devices.sprdi
+    mov r0, sprdi.SetPalette
+    mov r1, palette
+    int [devices.sprdi]
 
     ; Load custom font.
-    mov r0, $sprdi.SetSprites
-    mov r1, $font.sprites
-    mov r2, $font.ASCIIOffset
-    mov r3, $font.SpriteCount
-    int devices.sprdi
+    mov r0, sprdi.SetSprites
+    mov r1, font.sprites
+    mov r2, font.ASCIIOffset
+    mov r3, font.SpriteCount
+    int [devices.sprdi]
 
     ; Draw text to display buffer. Since the buffer contents are never
     ; changed in this example, we only need to do this once.
-    mov r0, $sprdi.Draw
-    mov r1, $strHelloWorld.data
-    mov r2, $strHelloWorld.len
-    int devices.sprdi
+    mov r0, sprdi.Draw
+    mov r1, strHelloWorld.data
+    mov r2, strHelloWorld.len
+    int [devices.sprdi]
     ret
 }
 
@@ -69,9 +69,9 @@ include "stdlib/gp14.svm"
 ; Device indices - used in INT instructions.
 ;------------------------------------------------------------------------------
 :devices {
-    :gp14  d16 $0
-    :sprdi d16 $0
-    :fd35  d16 $0
+    :gp14  d16 0
+    :sprdi d16 0
+    :fd35  d16 0
 }
 
 ;------------------------------------------------------------------------------
@@ -83,19 +83,19 @@ include "stdlib/gp14.svm"
     const _w  = sprdi.SpritePixelSize
     const _x  = (sprdi.DisplayWidth / 2) - ((_w*len) / 2)
     const _y  = (sprdi.DisplayHeight / 2) - (_w / 2)
-    :data d8 $'H',  $_x        ,   $_y
-          d8 $'e',  $_x + $_w  ,   $_y
-          d8 $'l',  $_x + $_w*2,   $_y
-          d8 $'l',  $_x + $_w*3,   $_y
-          d8 $'o',  $_x + $_w*4,   $_y
-          d8 $',',  $_x + $_w*5,   $_y
-          d8 $' ',  $_x + $_w*6,   $_y
-          d8 $'w',  $_x + $_w*7,   $_y
-          d8 $'o',  $_x + $_w*8,   $_y
-          d8 $'r',  $_x + $_w*9,   $_y
-          d8 $'l',  $_x + $_w*10,  $_y
-          d8 $'d',  $_x + $_w*11,  $_y
-          d8 $'!',  $_x + $_w*12,  $_y
+    :data d8 'H',  _x       ,   _y
+          d8 'e',  _x + _w  ,   _y
+          d8 'l',  _x + _w*2,   _y
+          d8 'l',  _x + _w*3,   _y
+          d8 'o',  _x + _w*4,   _y
+          d8 ',',  _x + _w*5,   _y
+          d8 ' ',  _x + _w*6,   _y
+          d8 'w',  _x + _w*7,   _y
+          d8 'o',  _x + _w*8,   _y
+          d8 'r',  _x + _w*9,   _y
+          d8 'l',  _x + _w*10,  _y
+          d8 'd',  _x + _w*11,  _y
+          d8 '!',  _x + _w*12,  _y
 }
 
 include "palette.svm"

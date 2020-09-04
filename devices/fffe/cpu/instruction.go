@@ -38,10 +38,10 @@ func (i *Instruction) Decode(m Memory) error {
 
 // Operand defines decoded instruction operand data.
 type Operand struct {
-	Address int         // Optional address representation.
-	Value   int         // Dereferenced value behind the address, if applicable. Otherwise same as Address.
-	Mode    AddressMode // Address mode.
-	Type    byte        // Operand data type.
+	Address int              // Optional address representation.
+	Value   int              // Dereferenced value behind the address, if applicable. Otherwise same as Address.
+	Mode    arch.AddressMode // Address mode.
+	Type    arch.Type        // Operand data type.
 }
 
 // Decode decodes the next instruction operand from the given memory bank.
@@ -51,11 +51,11 @@ func (op *Operand) Decode(m Memory) error {
 		return err
 	}
 
-	op.Mode = AddressMode(b>>6) & 0x3
-	op.Type = byte(b>>4) & 0x3
+	op.Mode = arch.AddressMode(b>>6) & 0x3
+	op.Type = arch.Type(b>>4) & 0x3
 
 	switch op.Mode {
-	case Constant:
+	case arch.ImmediateConstant:
 		v, err := m.next16()
 		if err != nil {
 			return err
@@ -74,7 +74,7 @@ func (op *Operand) Decode(m Memory) error {
 
 		op.Address = op.Value
 
-	case Address:
+	case arch.IndirectConstant:
 		op.Address, err = m.next16()
 		if err != nil {
 			return err
@@ -91,8 +91,22 @@ func (op *Operand) Decode(m Memory) error {
 			op.Value = m.I16(op.Address)
 		}
 
-	case Register:
+	case arch.ImmediateRegister:
 		op.Address = (b&0xf)*2 + UserMemoryCapacity
+
+		switch op.Type {
+		case arch.U8:
+			op.Value = m.U8(op.Address)
+		case arch.U16:
+			op.Value = m.U16(op.Address)
+		case arch.I8:
+			op.Value = m.I8(op.Address)
+		case arch.I16:
+			op.Value = m.I16(op.Address)
+		}
+
+	case arch.IndirectRegister:
+		op.Address = m.U16((b&0xf)*2 + UserMemoryCapacity)
 
 		switch op.Type {
 		case arch.U8:
@@ -108,13 +122,3 @@ func (op *Operand) Decode(m Memory) error {
 
 	return nil
 }
-
-// AddressMode defines instruction operand address modes.
-type AddressMode byte
-
-// Known address modes.
-const (
-	Constant AddressMode = iota // Operand is a constant numeric value.
-	Address                     // Operand is a memory address.
-	Register                    // Operand is a register index.
-)

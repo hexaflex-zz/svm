@@ -2,12 +2,16 @@
     const Manufacturer = 16#fffe
     const Serial       = 16#0003
 
+    ;------------------------------------------------------------------------------
     ; Interrupt codes
+    ;------------------------------------------------------------------------------
     const IsPressed        = 0
     const IsJustPressed    = 1
     const IsJustReleased   = 2
 
+    ;------------------------------------------------------------------------------
     ; Button indices
+    ;------------------------------------------------------------------------------
     const ButtonA           = 0
     const ButtonB           = 1
     const ButtonX           = 2
@@ -23,17 +27,21 @@
     const ButtonDown        = 13
     const ButtonLeft        = 14
 
+    ;------------------------------------------------------------------------------
     ; JmpOnJustPressed jumps to the given address if the specified key was just pressed.
+    ;------------------------------------------------------------------------------
     macro JmpOnJustPressed device, button, address
-        mov r0, $gp14.IsJustPressed
+        mov r0, gp14.IsJustPressed
         mov r1, button
         int device
         jnz address
     endmacro
 
+    ;------------------------------------------------------------------------------
     ; CallOnJustPressed calls the given subroutine if the specified key was just pressed.
+    ;------------------------------------------------------------------------------
     macro CallOnJustPressed device, button, subroutine
-        mov  r0, $gp14.IsJustPressed
+        mov  r0, gp14.IsJustPressed
         mov  r1, button
         int  device
         clnz subroutine

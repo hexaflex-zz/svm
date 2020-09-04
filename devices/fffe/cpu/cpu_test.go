@@ -2,10 +2,8 @@ package cpu
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"math/rand"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,11 +13,11 @@ import (
 )
 
 func TestWAIT(t *testing.T) {
-	//   WAIT $500
+	//   WAIT 500
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.WAIT, op(Constant, 500))
+	ct.emit(arch.WAIT, op(arch.ImmediateConstant, 500))
 	ct.emit(arch.HALT)
 
 	start := time.Now()
@@ -34,11 +32,11 @@ func TestWAIT(t *testing.T) {
 func TestWAIT8(t *testing.T) {
 	// Wait reads an 8-bit value. 500 gets truncated.
 	//
-	//   WAIT u8 $500
+	//   WAIT u8 500
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.WAIT, op(Constant, 500, arch.U8))
+	ct.emit(arch.WAIT, op(arch.ImmediateConstant, 500, arch.U8))
 	ct.emit(arch.HALT)
 
 	start := time.Now()
@@ -50,12 +48,12 @@ func TestWAIT8(t *testing.T) {
 	}
 }
 
-func TestMOV(t *testing.T) {
-	//    MOV r0, $123
+func TestMOV1(t *testing.T) {
+	//    MOV r0, 123
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123
@@ -63,12 +61,12 @@ func TestMOV(t *testing.T) {
 	runTest(t, ct)
 }
 
-func TestMOV8(t *testing.T) {
-	//    MOV u8 r0, $123
+func TestMOV2(t *testing.T) {
+	//    MOV u8 r0, 123
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOV, op(Register, 0, arch.U8), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0, arch.U8), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123 << 8
@@ -76,16 +74,45 @@ func TestMOV8(t *testing.T) {
 	runTest(t, ct)
 }
 
+func TestMOV3(t *testing.T) {
+	//    MOV r0, 123
+	//    MOV [r0], 321
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
+	ct.emit(arch.MOV, op(arch.IndirectRegister, 0), op(arch.ImmediateConstant, 321))
+	ct.emit(arch.HALT)
+
+	ct.want[R0] = 123
+	ct.want[123] = 321
+	ct.want[RIP] = 0xb
+	runTest(t, ct)
+}
+
+func TestMOV4(t *testing.T) {
+	//    MOV [123], 321
+	//   HALT
+
+	ct := newCodeTest()
+	ct.emit(arch.MOV, op(arch.IndirectConstant, 123), op(arch.ImmediateConstant, 321))
+	ct.emit(arch.HALT)
+
+	ct.want[123] = 321
+	ct.want[RIP] = 8
+	runTest(t, ct)
+}
+
 func TestPUSHPOP(t *testing.T) {
-	//    MOV r0, $123
+	//    MOV r0, 123
 	//   PUSH r0
 	//    POP r1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
-	ct.emit(arch.PUSH, op(Register, 0))
-	ct.emit(arch.POP, op(Register, 1))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
+	ct.emit(arch.PUSH, op(arch.ImmediateRegister, 0))
+	ct.emit(arch.POP, op(arch.ImmediateRegister, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123
@@ -96,11 +123,11 @@ func TestPUSHPOP(t *testing.T) {
 }
 
 func TestADD(t *testing.T) {
-	//    ADD r0, $1, $2
+	//    ADD r0, 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.ADD, op(Register, 0), op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.ADD, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 3
@@ -110,11 +137,11 @@ func TestADD(t *testing.T) {
 }
 
 func TestADD8(t *testing.T) {
-	//   ADD u8 r0, $1, $2
+	//   ADD u8 r0, 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.ADD, op(Register, 0, arch.U8), op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.ADD, op(arch.ImmediateRegister, 0, arch.U8), op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 3 << 8
@@ -124,11 +151,11 @@ func TestADD8(t *testing.T) {
 }
 
 func TestADDOverflow(t *testing.T) {
-	//    ADD r0, $0x7fff, $2
+	//    ADD r0, 0x7fff, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.ADD, op(Register, 0), op(Constant, 0x7fff), op(Constant, 1))
+	ct.emit(arch.ADD, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 0x7fff), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = -0x8000
@@ -138,11 +165,11 @@ func TestADDOverflow(t *testing.T) {
 }
 
 func TestADD8Overflow(t *testing.T) {
-	//   ADD i8 r0, $0x7f, $2
+	//   ADD i8 r0, 0x7f, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.ADD, op(Register, 0, arch.I8), op(Constant, 0x7f), op(Constant, 1))
+	ct.emit(arch.ADD, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 0x7f), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = -0x80 << 8
@@ -152,11 +179,11 @@ func TestADD8Overflow(t *testing.T) {
 }
 
 func TestSUB1(t *testing.T) {
-	//    SUB r0, $2, $1
+	//    SUB r0, 2, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SUB, op(Register, 0), op(Constant, 2), op(Constant, 1))
+	ct.emit(arch.SUB, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1
@@ -166,11 +193,11 @@ func TestSUB1(t *testing.T) {
 }
 
 func TestSUB81(t *testing.T) {
-	//   SUB i8 r0, $2, $1
+	//   SUB i8 r0, 2, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SUB, op(Register, 0, arch.I8), op(Constant, 2), op(Constant, 1))
+	ct.emit(arch.SUB, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1 << 8
@@ -180,11 +207,11 @@ func TestSUB81(t *testing.T) {
 }
 
 func TestSUB2(t *testing.T) {
-	//    SUB r0, $1, $2
+	//    SUB r0, 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SUB, op(Register, 0), op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.SUB, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = -1
@@ -194,11 +221,11 @@ func TestSUB2(t *testing.T) {
 }
 
 func TestSUB82(t *testing.T) {
-	//   SUB i8 r0, $1, $2
+	//   SUB i8 r0, 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SUB, op(Register, 0, arch.I8), op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.SUB, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = -1 << 8
@@ -208,11 +235,11 @@ func TestSUB82(t *testing.T) {
 }
 
 func TestSUBOverflow(t *testing.T) {
-	//    SUB r0, $-0x7fff, $2
+	//    SUB r0, -0x7fff, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SUB, op(Register, 0), op(Constant, -0x7fff), op(Constant, 2))
+	ct.emit(arch.SUB, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, -0x7fff), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 0x7fff
@@ -222,11 +249,11 @@ func TestSUBOverflow(t *testing.T) {
 }
 
 func TestSUB8Overflow(t *testing.T) {
-	//   SUB i8 r0, $-0x7f, $2
+	//   SUB i8 r0, -0x7f, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SUB, op(Register, 0, arch.I8), op(Constant, -0x7f), op(Constant, 2))
+	ct.emit(arch.SUB, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, -0x7f), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 0x7f << 8
@@ -236,11 +263,11 @@ func TestSUB8Overflow(t *testing.T) {
 }
 
 func TestMUL(t *testing.T) {
-	//    MUL r0, $2, $3
+	//    MUL r0, 2, 3
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MUL, op(Register, 0), op(Constant, 2), op(Constant, 3))
+	ct.emit(arch.MUL, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 3))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 6
@@ -250,11 +277,11 @@ func TestMUL(t *testing.T) {
 }
 
 func TestMUL8(t *testing.T) {
-	//   MUL u8 r0, $2, $3
+	//   MUL u8 r0, 2, 3
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MUL, op(Register, 0, arch.U8), op(Constant, 2), op(Constant, 3))
+	ct.emit(arch.MUL, op(arch.ImmediateRegister, 0, arch.U8), op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 3))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 6 << 8
@@ -264,11 +291,11 @@ func TestMUL8(t *testing.T) {
 }
 
 func TestMULOverflow(t *testing.T) {
-	//    MUL r0, $0x7fff, $2
+	//    MUL r0, 0x7fff, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MUL, op(Register, 0), op(Constant, 0x7fff), op(Constant, 2))
+	ct.emit(arch.MUL, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 0x7fff), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = -2
@@ -278,11 +305,11 @@ func TestMULOverflow(t *testing.T) {
 }
 
 func TestMUL8Overflow(t *testing.T) {
-	//   MUL i8 r0, $0x7f, $2
+	//   MUL i8 r0, 0x7f, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MUL, op(Register, 0, arch.I8), op(Constant, 0x7f), op(Constant, 2))
+	ct.emit(arch.MUL, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 0x7f), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = -2 << 8
@@ -292,11 +319,11 @@ func TestMUL8Overflow(t *testing.T) {
 }
 
 func TestDIV(t *testing.T) {
-	//    DIV r0, $4, $2
+	//    DIV r0, 4, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.DIV, op(Register, 0), op(Constant, 4), op(Constant, 2))
+	ct.emit(arch.DIV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 2
@@ -306,11 +333,11 @@ func TestDIV(t *testing.T) {
 }
 
 func TestDIV8(t *testing.T) {
-	//   DIV i8 r0, $4, $2
+	//   DIV i8 r0, 4, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.DIV, op(Register, 0, arch.I8), op(Constant, 4), op(Constant, 2))
+	ct.emit(arch.DIV, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 2 << 8
@@ -320,11 +347,11 @@ func TestDIV8(t *testing.T) {
 }
 
 func TestDIVDivideByZero(t *testing.T) {
-	//    DIV r0, $4, $0
+	//    DIV r0, 4, 0
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.DIV, op(Register, 0), op(Constant, 4), op(Constant, 0))
+	ct.emit(arch.DIV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 0))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 0
@@ -334,11 +361,11 @@ func TestDIVDivideByZero(t *testing.T) {
 }
 
 func TestDIV8DivideByZero(t *testing.T) {
-	//   DIV i8 r0, $4, $0
+	//   DIV i8 r0, 4, 0
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.DIV, op(Register, 0, arch.I8), op(Constant, 4), op(Constant, 0))
+	ct.emit(arch.DIV, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 0))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 0
@@ -348,11 +375,11 @@ func TestDIV8DivideByZero(t *testing.T) {
 }
 
 func TestMOD(t *testing.T) {
-	//    MOD r0, $4, $3
+	//    MOD r0, 4, 3
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOD, op(Register, 0), op(Constant, 4), op(Constant, 3))
+	ct.emit(arch.MOD, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 3))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1
@@ -362,11 +389,11 @@ func TestMOD(t *testing.T) {
 }
 
 func TestMOD8(t *testing.T) {
-	//   MOD i8 r0, $4, $3
+	//   MOD i8 r0, 4, 3
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOD, op(Register, 0, arch.I8), op(Constant, 4), op(Constant, 3))
+	ct.emit(arch.MOD, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 3))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1 << 8
@@ -376,11 +403,11 @@ func TestMOD8(t *testing.T) {
 }
 
 func TestMODDivideByZero(t *testing.T) {
-	//    MOD r0, $4, $0
+	//    MOD r0, 4, 0
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOD, op(Register, 0), op(Constant, 4), op(Constant, 0))
+	ct.emit(arch.MOD, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 0))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 0
@@ -390,11 +417,11 @@ func TestMODDivideByZero(t *testing.T) {
 }
 
 func TestMOD8DivideByZero(t *testing.T) {
-	//   MOD i8 r0, $4, $0
+	//   MOD i8 r0, 4, 0
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.MOD, op(Register, 0, arch.I8), op(Constant, 4), op(Constant, 0))
+	ct.emit(arch.MOD, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 0))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 0
@@ -404,11 +431,11 @@ func TestMOD8DivideByZero(t *testing.T) {
 }
 
 func TestSHL(t *testing.T) {
-	//    SHL r0, $5, $1
+	//    SHL r0, 5, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SHL, op(Register, 0), op(Constant, 5), op(Constant, 1))
+	ct.emit(arch.SHL, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 5), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 10
@@ -417,11 +444,11 @@ func TestSHL(t *testing.T) {
 }
 
 func TestSHR(t *testing.T) {
-	//    SHR r0, $5, $1
+	//    SHR r0, 5, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SHR, op(Register, 0), op(Constant, 5), op(Constant, 1))
+	ct.emit(arch.SHR, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 5), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 2
@@ -430,11 +457,11 @@ func TestSHR(t *testing.T) {
 }
 
 func TestAND(t *testing.T) {
-	//    AND r0, $5, $1
+	//    AND r0, 5, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.AND, op(Register, 0), op(Constant, 5), op(Constant, 1))
+	ct.emit(arch.AND, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 5), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1
@@ -443,11 +470,11 @@ func TestAND(t *testing.T) {
 }
 
 func TestOR1(t *testing.T) {
-	//     OR r0, $5, $1
+	//     OR r0, 5, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.OR, op(Register, 0), op(Constant, 5), op(Constant, 1))
+	ct.emit(arch.OR, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 5), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 5
@@ -456,11 +483,11 @@ func TestOR1(t *testing.T) {
 }
 
 func TestOR2(t *testing.T) {
-	//     OR r0, $4, $1
+	//     OR r0, 4, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.OR, op(Register, 0), op(Constant, 4), op(Constant, 1))
+	ct.emit(arch.OR, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 5
@@ -469,11 +496,11 @@ func TestOR2(t *testing.T) {
 }
 
 func TestXOR1(t *testing.T) {
-	//    XOR r0, $4, $1
+	//    XOR r0, 4, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.XOR, op(Register, 0), op(Constant, 4), op(Constant, 1))
+	ct.emit(arch.XOR, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 4), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 5
@@ -482,11 +509,11 @@ func TestXOR1(t *testing.T) {
 }
 
 func TestXOR2(t *testing.T) {
-	//    XOR r0, $5, $1
+	//    XOR r0, 5, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.XOR, op(Register, 0), op(Constant, 5), op(Constant, 1))
+	ct.emit(arch.XOR, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 5), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 4
@@ -495,11 +522,11 @@ func TestXOR2(t *testing.T) {
 }
 
 func TestABS1(t *testing.T) {
-	//    ABS r0, $1
+	//    ABS r0, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.ABS, op(Register, 0), op(Constant, 1))
+	ct.emit(arch.ABS, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1
@@ -509,11 +536,11 @@ func TestABS1(t *testing.T) {
 }
 
 func TestABS2(t *testing.T) {
-	//   ABS i8 r0, $1
+	//   ABS i8 r0, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.ABS, op(Register, 0, arch.I8), op(Constant, 1))
+	ct.emit(arch.ABS, op(arch.ImmediateRegister, 0, arch.I8), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1 << 8
@@ -523,11 +550,11 @@ func TestABS2(t *testing.T) {
 }
 
 func TestPOW1(t *testing.T) {
-	//    POW r0, $2, $2
+	//    POW r0, 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.POW, op(Register, 0), op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.POW, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 4
@@ -537,11 +564,11 @@ func TestPOW1(t *testing.T) {
 }
 
 func TestPOW2(t *testing.T) {
-	//    POW r0, $0x7fff, $2
+	//    POW r0, 0x7fff, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.POW, op(Register, 0), op(Constant, 0x7fff), op(Constant, 2))
+	ct.emit(arch.POW, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 0x7fff), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 1
@@ -551,11 +578,11 @@ func TestPOW2(t *testing.T) {
 }
 
 func TestCEQ1(t *testing.T) {
-	//    CEQ $2, $2
+	//    CEQ 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -564,11 +591,11 @@ func TestCEQ1(t *testing.T) {
 }
 
 func TestCEQ81(t *testing.T) {
-	//   CEQ i8 $2, $2
+	//   CEQ i8 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 2, arch.I8), op(Constant, 2))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 2, arch.I8), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -577,11 +604,11 @@ func TestCEQ81(t *testing.T) {
 }
 
 func TestCEQ2(t *testing.T) {
-	//    CEQ $1, $2
+	//    CEQ 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -590,11 +617,11 @@ func TestCEQ2(t *testing.T) {
 }
 
 func TestCNE1(t *testing.T) {
-	//    CNE $2, $2
+	//    CNE 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CNE, op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.CNE, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -603,11 +630,11 @@ func TestCNE1(t *testing.T) {
 }
 
 func TestCNE2(t *testing.T) {
-	//    CNE $1, $2
+	//    CNE 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CNE, op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.CNE, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -616,11 +643,11 @@ func TestCNE2(t *testing.T) {
 }
 
 func TestCGT1(t *testing.T) {
-	//    CGT $2, $2
+	//    CGT 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CGT, op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.CGT, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -629,11 +656,11 @@ func TestCGT1(t *testing.T) {
 }
 
 func TestCGT2(t *testing.T) {
-	//    CGT $1, $2
+	//    CGT 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CGT, op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.CGT, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -642,11 +669,11 @@ func TestCGT2(t *testing.T) {
 }
 
 func TestCGT3(t *testing.T) {
-	//    CGT $2, $1
+	//    CGT 2, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CGT, op(Constant, 2), op(Constant, 1))
+	ct.emit(arch.CGT, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -655,11 +682,11 @@ func TestCGT3(t *testing.T) {
 }
 
 func TestCGE1(t *testing.T) {
-	//    CGE $2, $2
+	//    CGE 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CGE, op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.CGE, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -668,11 +695,11 @@ func TestCGE1(t *testing.T) {
 }
 
 func TestCGE2(t *testing.T) {
-	//    CGE $1, $2
+	//    CGE 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CGE, op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.CGE, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -681,11 +708,11 @@ func TestCGE2(t *testing.T) {
 }
 
 func TestCLT1(t *testing.T) {
-	//    CLT $2, $2
+	//    CLT 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CLT, op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.CLT, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -694,11 +721,11 @@ func TestCLT1(t *testing.T) {
 }
 
 func TestCLT2(t *testing.T) {
-	//    CLT $1, $2
+	//    CLT 1, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CLT, op(Constant, 1), op(Constant, 2))
+	ct.emit(arch.CLT, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -707,11 +734,11 @@ func TestCLT2(t *testing.T) {
 }
 
 func TestCLT3(t *testing.T) {
-	//    CLT $2, $1
+	//    CLT 2, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CLT, op(Constant, 2), op(Constant, 1))
+	ct.emit(arch.CLT, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -720,11 +747,11 @@ func TestCLT3(t *testing.T) {
 }
 
 func TestCLE1(t *testing.T) {
-	//    CLE $2, $2
+	//    CLE 2, 2
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CLE, op(Constant, 2), op(Constant, 2))
+	ct.emit(arch.CLE, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 2))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -733,11 +760,11 @@ func TestCLE1(t *testing.T) {
 }
 
 func TestCLE2(t *testing.T) {
-	//    CLE $2, $1
+	//    CLE 2, 1
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CLE, op(Constant, 2), op(Constant, 1))
+	ct.emit(arch.CLE, op(arch.ImmediateConstant, 2), op(arch.ImmediateConstant, 1))
 	ct.emit(arch.HALT)
 
 	ct.want[RIP] = 8
@@ -754,10 +781,10 @@ func TestJMP(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.JMP, op(Constant, 10))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.JMP, op(arch.ImmediateConstant, 10))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 456
@@ -766,7 +793,7 @@ func TestJMP(t *testing.T) {
 }
 
 func TestJEZ1(t *testing.T) {
-	//    CEQ  $1, $2
+	//    CEQ  1, 2
 	//    JEZ  foo
 	//    MOV  r0, 123
 	//    HALT
@@ -775,11 +802,11 @@ func TestJEZ1(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 1), op(Constant, 2))
-	ct.emit(arch.JEZ, op(Constant, 17))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
+	ct.emit(arch.JEZ, op(arch.ImmediateConstant, 17))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 456
@@ -788,7 +815,7 @@ func TestJEZ1(t *testing.T) {
 }
 
 func TestJEZ2(t *testing.T) {
-	//    CEQ  $1, $1
+	//    CEQ  1, 1
 	//    JEZ  foo
 	//    MOV  r0, 123
 	//    HALT
@@ -797,11 +824,11 @@ func TestJEZ2(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 1), op(Constant, 1))
-	ct.emit(arch.JEZ, op(Constant, 17))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 1))
+	ct.emit(arch.JEZ, op(arch.ImmediateConstant, 17))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123
@@ -810,7 +837,7 @@ func TestJEZ2(t *testing.T) {
 }
 
 func TestJNZ1(t *testing.T) {
-	//    CEQ  $1, $2
+	//    CEQ  1, 2
 	//    JNZ  foo
 	//    MOV  r0, 123
 	//    HALT
@@ -819,11 +846,11 @@ func TestJNZ1(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 1), op(Constant, 2))
-	ct.emit(arch.JNZ, op(Constant, 17))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 2))
+	ct.emit(arch.JNZ, op(arch.ImmediateConstant, 17))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123
@@ -832,7 +859,7 @@ func TestJNZ1(t *testing.T) {
 }
 
 func TestJNZ2(t *testing.T) {
-	//    CEQ  $1, $1
+	//    CEQ  1, 1
 	//    JNZ  foo
 	//    MOV  r0, 123
 	//    HALT
@@ -841,11 +868,11 @@ func TestJNZ2(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 1), op(Constant, 1))
-	ct.emit(arch.JNZ, op(Constant, 17))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 1), op(arch.ImmediateConstant, 1))
+	ct.emit(arch.JNZ, op(arch.ImmediateConstant, 17))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 456
@@ -861,9 +888,9 @@ func TestCALLRET(t *testing.T) {
 	//    RET
 
 	ct := newCodeTest()
-	ct.emit(arch.CALL, op(Constant, 5))
+	ct.emit(arch.CALL, op(arch.ImmediateConstant, 5))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.RET)
 
 	ct.want[R0] = 123
@@ -877,18 +904,18 @@ func TestCALLRET(t *testing.T) {
 }
 
 func TestCLEZ1(t *testing.T) {
-	//    CEQ  $0, $1
-	//    CLEZ $foo
+	//    CEQ  0, 1
+	//    CLEZ foo
 	//    HALT
 	// :foo
 	//    MOV  r0, 123
 	//    RET
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 0), op(Constant, 1))
-	ct.emit(arch.CLEZ, op(Constant, 12))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 1))
+	ct.emit(arch.CLEZ, op(arch.ImmediateConstant, 12))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.RET)
 
 	ct.want[R0] = 123
@@ -896,18 +923,18 @@ func TestCLEZ1(t *testing.T) {
 }
 
 func TestCLEZ2(t *testing.T) {
-	//    CEQ  $0, $0
-	//    CLEZ $foo
+	//    CEQ  0, 0
+	//    CLEZ foo
 	//    HALT
 	// :foo
 	//    MOV  r0, 123
 	//    RET
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 0), op(Constant, 0))
-	ct.emit(arch.CLEZ, op(Constant, 12))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 0))
+	ct.emit(arch.CLEZ, op(arch.ImmediateConstant, 12))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.RET)
 
 	ct.want[R0] = 0
@@ -915,18 +942,18 @@ func TestCLEZ2(t *testing.T) {
 }
 
 func TestCLNZ1(t *testing.T) {
-	//    CEQ  $0, $1
-	//    CLNZ $foo
+	//    CEQ  0, 1
+	//    CLNZ foo
 	//    HALT
 	// :foo
 	//    MOV  r0, 123
 	//    RET
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 0), op(Constant, 1))
-	ct.emit(arch.CLNZ, op(Constant, 12))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 1))
+	ct.emit(arch.CLNZ, op(arch.ImmediateConstant, 12))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.RET)
 
 	ct.want[R0] = 0
@@ -934,18 +961,18 @@ func TestCLNZ1(t *testing.T) {
 }
 
 func TestCLNZ2(t *testing.T) {
-	//    CEQ  $0, $0
-	//    CLNZ $foo
+	//    CEQ  0, 0
+	//    CLNZ foo
 	//    HALT
 	// :foo
 	//    MOV  r0, 123
 	//    RET
 
 	ct := newCodeTest()
-	ct.emit(arch.CEQ, op(Constant, 0), op(Constant, 0))
-	ct.emit(arch.CLNZ, op(Constant, 12))
+	ct.emit(arch.CEQ, op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 0))
+	ct.emit(arch.CLNZ, op(arch.ImmediateConstant, 12))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.RET)
 
 	ct.want[R0] = 123
@@ -953,7 +980,7 @@ func TestCLNZ2(t *testing.T) {
 }
 
 func TestHWA1(t *testing.T) {
-	//    HWA  r0, $0xc0, $0xffee
+	//    HWA  r0, 0xc0, 0xffee
 	//    JEZ  notfound
 	//    MOV  r0, 123
 	//    HALT
@@ -962,11 +989,11 @@ func TestHWA1(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.HWA, op(Register, 0), op(Constant, testID.Manufacturer()), op(Constant, testID.Serial()))
-	ct.emit(arch.JEZ, op(Constant, 18))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.HWA, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, testID.Manufacturer()), op(arch.ImmediateConstant, testID.Serial()))
+	ct.emit(arch.JEZ, op(arch.ImmediateConstant, 18))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123
@@ -976,7 +1003,7 @@ func TestHWA1(t *testing.T) {
 }
 
 func TestHWA2(t *testing.T) {
-	//    HWA  r0, $0, $0
+	//    HWA  r0, 0, 0
 	//    JEZ  notfound
 	//    MOV  r0, 123
 	//    HALT
@@ -985,11 +1012,11 @@ func TestHWA2(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.HWA, op(Register, 0), op(Constant, 0), op(Constant, 0))
-	ct.emit(arch.JEZ, op(Constant, 18))
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 123))
+	ct.emit(arch.HWA, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 0, arch.U16), op(arch.ImmediateConstant, 0, arch.U16))
+	ct.emit(arch.JEZ, op(arch.ImmediateConstant, 18))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 123))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 456
@@ -999,7 +1026,7 @@ func TestHWA2(t *testing.T) {
 }
 
 func TestINT(t *testing.T) {
-	//    HWA  r0, $0xc0, $0xffee
+	//    HWA  r0, 0xc0, 0xffee
 	//    JEZ  notfound
 	//    INT  r0
 	//    HALT
@@ -1008,11 +1035,14 @@ func TestINT(t *testing.T) {
 	//    HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.HWA, op(Register, 0), op(Constant, testID.Manufacturer()), op(Constant, testID.Serial()))
-	ct.emit(arch.JEZ, op(Constant, 15))
-	ct.emit(arch.INT, op(Register, 0))
+	ct.emit(arch.HWA,
+		op(arch.ImmediateRegister, 0),
+		op(arch.ImmediateConstant, testID.Manufacturer(), arch.U16),
+		op(arch.ImmediateConstant, testID.Serial(), arch.U16))
+	ct.emit(arch.JEZ, op(arch.ImmediateConstant, 15))
+	ct.emit(arch.INT, op(arch.ImmediateRegister, 0))
 	ct.emit(arch.HALT)
-	ct.emit(arch.MOV, op(Register, 0), op(Constant, 456))
+	ct.emit(arch.MOV, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 456))
 	ct.emit(arch.HALT)
 
 	ct.want[R0] = 123
@@ -1022,17 +1052,17 @@ func TestINT(t *testing.T) {
 }
 
 func TestSEEDRNG(t *testing.T) {
-	//   SEED $0
-	//   RNG r0, $0, $10
-	//   SEED $0
-	//   RNG r1, $0, $10
+	//   SEED 0
+	//   RNG r0, 0, 10
+	//   SEED 0
+	//   RNG r1, 0, 10
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SEED, op(Constant, 0))
-	ct.emit(arch.RNG, op(Register, 0), op(Constant, 0), op(Constant, 10))
-	ct.emit(arch.SEED, op(Constant, 0))
-	ct.emit(arch.RNG, op(Register, 1), op(Constant, 0), op(Constant, 10))
+	ct.emit(arch.SEED, op(arch.ImmediateConstant, 0))
+	ct.emit(arch.RNG, op(arch.ImmediateRegister, 0), op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 10))
+	ct.emit(arch.SEED, op(arch.ImmediateConstant, 0))
+	ct.emit(arch.RNG, op(arch.ImmediateRegister, 1), op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 10))
 	ct.emit(arch.HALT)
 
 	rng := rand.New(rand.NewSource(0))
@@ -1046,17 +1076,17 @@ func TestSEEDRNG(t *testing.T) {
 }
 
 func TestSEED8RNG8(t *testing.T) {
-	//   SEED $0
-	//   RNG u8 r0, $0, $10
-	//   SEED $0
-	//   RNG u8 r1, $0, $10
+	//   SEED 0
+	//   RNG u8 r0, 0, 10
+	//   SEED 0
+	//   RNG u8 r1, 0, 10
 	//   HALT
 
 	ct := newCodeTest()
-	ct.emit(arch.SEED, op(Constant, 0))
-	ct.emit(arch.RNG, op(Register, 0, arch.U8), op(Constant, 0), op(Constant, 10))
-	ct.emit(arch.SEED, op(Constant, 0))
-	ct.emit(arch.RNG, op(Register, 1, arch.U8), op(Constant, 0), op(Constant, 10))
+	ct.emit(arch.SEED, op(arch.ImmediateConstant, 0))
+	ct.emit(arch.RNG, op(arch.ImmediateRegister, 0, arch.U8), op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 10))
+	ct.emit(arch.SEED, op(arch.ImmediateConstant, 0))
+	ct.emit(arch.RNG, op(arch.ImmediateRegister, 1, arch.U8), op(arch.ImmediateConstant, 0), op(arch.ImmediateConstant, 10))
 	ct.emit(arch.HALT)
 
 	rng := rand.New(rand.NewSource(0))
@@ -1075,7 +1105,7 @@ func runTest(t *testing.T, ct *codeTest) {
 	ar := ar.New()
 	ar.Instructions = ct.program.Bytes()
 
-	vm := New(trace)
+	vm := New(nil)
 	vm.Connect(&testDevice{})
 
 	if err := vm.Startup(); err != nil {
@@ -1139,47 +1169,21 @@ func (ct *codeTest) emit(opcode byte, ops ...[3]int) {
 	for _, v := range ops {
 		attr := byte(v[0]&0x3)<<6 | byte(v[1]&0x3)<<4
 
-		switch AddressMode(v[0]) {
-		case Constant, Address:
+		switch arch.AddressMode(v[0]) {
+		case arch.ImmediateConstant, arch.IndirectConstant:
 			w.WriteByte(attr)
 			w.WriteByte(byte(v[2] >> 8))
 			w.WriteByte(byte(v[2]))
 
-		case Register:
+		case arch.ImmediateRegister, arch.IndirectRegister:
 			w.WriteByte(attr | byte(v[2]&0xf))
 		}
 	}
 }
 
-func op(mode AddressMode, value int, typ ...int) [3]int {
+func op(mode arch.AddressMode, value int, typ ...arch.Type) [3]int {
 	if len(typ) > 0 {
-		return [...]int{int(mode), typ[0], value}
+		return [...]int{int(mode), int(typ[0]), value}
 	}
-	return [...]int{int(mode), arch.I16, value}
-}
-
-func trace(i *Instruction) {
-	name, ok := arch.Name(i.Opcode)
-	if !ok {
-		name = fmt.Sprintf("%02x", i.Opcode)
-	}
-
-	var sb strings.Builder
-
-	for j := 0; j < arch.Argc(i.Opcode); j++ {
-		if j > 0 {
-			sb.WriteString(", ")
-		}
-
-		addr := i.Args[j].Address
-		if addr >= UserMemoryCapacity {
-			index := (addr - UserMemoryCapacity) / 2
-			reg := arch.RegisterName(index)
-			sb.WriteString(fmt.Sprintf("%s (%04x)", reg, i.Args[j].Value))
-		} else {
-			sb.WriteString(fmt.Sprintf("%04x (%04x)", addr, i.Args[j].Value))
-		}
-	}
-
-	fmt.Printf("%04x %5s %s\n", i.IP, name, sb.String())
+	return [...]int{int(mode), int(arch.I16), value}
 }
