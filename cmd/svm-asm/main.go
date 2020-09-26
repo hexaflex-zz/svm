@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,16 +92,20 @@ func buildDebug(c *Config, ar *ar.Archive) {
 
 // makeWriter creates an output writer and a cleanup function for it.
 func makeWriter(file string) (io.Writer, func()) {
+	log.Println("##", file)
+
 	dir, _ := filepath.Split(file)
-	err := os.MkdirAll(dir, 0744)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	if len(dir) > 0 {
+		err := os.MkdirAll(dir, 0744)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "makeWriter: os.MkdirAll:", err)
+			os.Exit(1)
+		}
 	}
 
 	fd, err := os.Create(file)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "makeWriter: os.Create:", err)
 		os.Exit(1)
 	}
 
